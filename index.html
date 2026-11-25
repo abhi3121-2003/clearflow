@@ -176,6 +176,7 @@
     <header class="topbar">
       <div class="brand"><span class="brand-dot"></span> ClearFlow</div>
       <div class="top-actions">
+        <button class="icon-btn" onclick="forceAppUpdate()" id="syncBtn">Sync</button>
         <button class="icon-btn" id="themeBtn" onclick="cycleTheme()">Theme: Auto</button>
         <button class="icon-btn" onclick="handleLogout()">Lock</button>
       </div>
@@ -1176,6 +1177,43 @@
       document.getElementById("nav-" + tab).classList.add("active");
     }
 
+// AUTO-UPDATE ENGINE FOR iPHONE HOME SCREEN APP
+    const APP_VERSION = "1.2.0"; // Bump this when pushing major updates
+
+    async function checkForAppUpdate(manual = false) {
+      const btn = document.getElementById("syncBtn");
+      if (manual && btn) btn.textContent = "Syncing...";
+      try {
+        // Fetch fresh index.html bypassing Safari cache
+        const res = await fetch(window.location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+        const freshHtml = await res.text();
+        const match = freshHtml.match(/const APP_VERSION = "(.*?)";/);
+        if (match && match[1] && match[1] !== APP_VERSION) {
+          window.location.replace(window.location.pathname + "?upd=" + Date.now());
+          return;
+        }
+        if (manual) {
+          await loadAllData();
+          if (btn) btn.textContent = "Updated!";
+          setTimeout(() => { if (btn) btn.textContent = "Sync"; }, 1500);
+        }
+      } catch (e) {
+        if (manual && btn) btn.textContent = "Sync";
+      }
+    }
+
+    function forceAppUpdate() {
+      checkForAppUpdate(true);
+    }
+
+    // Automatically check whenever app opens or comes back to foreground on iPhone
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        checkForAppUpdate(false);
+        if (currentUser) loadAllData();
+      }
+    });
+    
     initAuth();
   </script>
 </body>
