@@ -60,6 +60,11 @@
       background: var(--bg); border: 1px solid var(--border); color: var(--text);
       padding: 6px 9px; border-radius: 10px; font-size: 0.76rem; font-weight: 600; cursor: pointer;
     }
+    .del-btn {
+      background: var(--danger-soft); border: none; color: var(--danger);
+      width: 24px; height: 24px; border-radius: 7px; font-size: 0.85rem; font-weight: 800; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; margin-left: 6px;
+    }
 
     /* Container */
     .container { max-width: 680px; margin: 0 auto; padding: 14px; }
@@ -69,11 +74,12 @@
       background: var(--card); border: 1px solid var(--border); border-radius: 16px;
       padding: 15px; margin-bottom: 14px; box-shadow: var(--shadow);
     }
-    .card-title { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .card-title { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .stat-box { background: var(--bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); }
-    .stat-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
-    .stat-val { font-size: 1.1rem; font-weight: 800; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat-box { background: var(--bg); padding: 11px; border-radius: 12px; border: 1px solid var(--border); }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+    .stat-val { font-size: 1.05rem; font-weight: 800; }
     .text-green { color: var(--success); }
     .text-red { color: var(--danger); }
     .text-amber { color: var(--warning); }
@@ -92,12 +98,12 @@
     /* Lists */
     .list-item {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 11px 0; border-bottom: 1px solid var(--border); gap: 10px;
+      padding: 11px 0; border-bottom: 1px solid var(--border); gap: 8px;
     }
     .list-item:last-child { border-bottom: none; padding-bottom: 0; }
     .item-main { flex: 1; min-width: 0; }
-    .item-title { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+    .item-title { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
     .badge {
       display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
     }
@@ -233,9 +239,13 @@
           <div id="bankListContainer"></div>
         </div>
 
-        <!-- RECENT TRANSACTIONS -->
+        <!-- RECENT TRANSACTIONS WITH MONTH FILTER -->
         <div class="card">
-          <div class="card-title"><span>Recent Activity</span></div>
+          <div class="card-title">
+            <span>Activity Log</span>
+            <select id="monthFilter" onchange="renderDashboard()" style="width:auto; padding:4px 8px; font-size:0.75rem;"></select>
+          </div>
+          <div id="monthSummaryStrip" style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;"></div>
           <div id="recentTxContainer"></div>
         </div>
       </div>
@@ -243,7 +253,7 @@
       <!-- TAB 2: QUICK ADD -->
       <div id="view-add" class="view">
         <div class="card">
-          <div class="card-title"><span>Quick Entry (Zero-Typing)</span></div>
+          <div class="card-title"><span>Quick Entry</span></div>
           
           <div class="form-group">
             <label>Entry Type</label>
@@ -300,7 +310,7 @@
 
           <div class="form-group">
             <label>Quick Note (Optional)</label>
-            <input type="text" id="txNote" placeholder="e.g., Bike petrol, Chai, Amazon order..." />
+            <input type="text" id="txNote" placeholder="e.g., Chai, Metro, Amazon order..." />
           </div>
 
           <button class="btn" onclick="submitTransaction()" id="saveTxBtn">Save Entry to Cloud</button>
@@ -310,17 +320,22 @@
       <!-- TAB 3: JUPITER FUEL & MILEAGE -->
       <div id="view-fuel" class="view">
         <div class="card">
-          <div class="card-title"><span>Jupiter Mileage Summary</span><span id="fuelPriceBadge" class="badge badge-blue">₹107.47/L</span></div>
-          <div class="grid-2">
+          <div class="card-title"><span>Jupiter Mileage & Running Cost</span><span id="fuelPriceBadge" class="badge badge-blue">₹107.47/L</span></div>
+          <div class="grid-3">
             <div class="stat-box">
-              <div class="stat-label">Overall Avg Mileage</div>
-              <div class="stat-val text-green" id="overallAvgMileage">47.0 km/l</div>
+              <div class="stat-label">Overall Avg</div>
+              <div class="stat-val text-green" id="overallAvgMileage">—</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">Last Fill Mileage</div>
-              <div class="stat-val text-blue" id="lastFillMileage">46.9 km/l</div>
+              <div class="stat-label">Last Fill</div>
+              <div class="stat-val text-blue" id="lastFillMileage">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Cost / KM</div>
+              <div class="stat-val text-amber" id="fuelCostPerKm">—</div>
             </div>
           </div>
+          <div id="lastFuelRefBanner" style="font-size:0.76rem; color:var(--muted); margin-top:10px;"></div>
         </div>
 
         <div class="card">
@@ -328,11 +343,11 @@
           <div class="grid-2">
             <div class="form-group">
               <label>Amount Paid (₹)</label>
-              <input type="number" step="0.01" id="fuelAmount" placeholder="e.g., 350" oninput="calcFuelPreview()" />
+              <input type="number" step="0.01" id="fuelAmount" placeholder="e.g., 333" oninput="calcFuelPreview()" />
             </div>
             <div class="form-group">
               <label>KM Range (Trip)</label>
-              <input type="number" step="0.1" id="fuelKm" placeholder="e.g., 145.5" oninput="calcFuelPreview()" />
+              <input type="number" step="0.1" id="fuelKm" placeholder="e.g., 118.9" oninput="calcFuelPreview()" />
             </div>
           </div>
           <div class="grid-2">
@@ -341,8 +356,8 @@
               <input type="number" step="0.01" id="fuelPrice" value="107.47" oninput="calcFuelPreview()" />
             </div>
             <div class="form-group">
-              <label>Paid Via Account</label>
-              <select id="fuelAccount"></select>
+              <label>Paid Via (Sticky Mode)</label>
+              <select id="fuelAccount" onchange="saveStickyFuelAccount()"></select>
             </div>
           </div>
           <div class="form-group">
@@ -354,7 +369,7 @@
         </div>
 
         <div class="card">
-          <div class="card-title"><span>Jupiter Fill History</span></div>
+          <div class="card-title"><span>Jupiter Fill History</span><span id="totalFuelSpendLabel"></span></div>
           <div id="fuelHistoryContainer"></div>
         </div>
       </div>
@@ -422,7 +437,7 @@
     let currentUser = null;
     let state = { accounts: [], recurring: [], transactions: [], friends: [], fuel: [] };
 
-    // THEME ENGINE (Auto System Sync + Manual Override)
+    // THEME ENGINE
     let themeMode = localStorage.getItem("clearflow_theme") || "auto";
     function applyTheme() {
       const btn = document.getElementById("themeBtn");
@@ -493,7 +508,7 @@
       const [accRes, recRes, txRes, frRes, fuelRes] = await Promise.all([
         sb.from("finance_accounts").select("*").order("name"),
         sb.from("finance_recurring").select("*").order("due_day"),
-        sb.from("finance_transactions").select("*").order("tx_date", { ascending: false }).order("created_at", { ascending: false }).limit(25),
+        sb.from("finance_transactions").select("*").order("tx_date", { ascending: false }).order("created_at", { ascending: false }).limit(100),
         sb.from("finance_friends").select("*").order("entry_date", { ascending: false }),
         sb.from("finance_fuel").select("*").order("fill_date", { ascending: false }).order("created_at", { ascending: false })
       ]);
@@ -504,12 +519,25 @@
       state.friends = frRes.data || [];
       state.fuel = fuelRes.data || [];
 
+      populateMonthFilter();
       document.getElementById("seedBanner").style.display = state.accounts.length === 0 ? "block" : "none";
       renderDashboard();
       renderFuel();
       renderCards();
       renderRecurring();
       renderFriends();
+    }
+
+    function populateMonthFilter() {
+      const sel = document.getElementById("monthFilter");
+      const currentVal = sel.value;
+      const months = new Set();
+      const nowYm = new Date().toISOString().slice(0, 7);
+      months.add(nowYm);
+      state.transactions.forEach(t => { if (t.tx_date) months.add(t.tx_date.slice(0, 7)); });
+      const sorted = Array.from(months).sort().reverse();
+      sel.innerHTML = sorted.map(m => `<option value="${m}">${m}</option>`).join("") + `<option value="ALL">All Time</option>`;
+      if (currentVal && Array.from(sel.options).some(o => o.value === currentVal)) sel.value = currentVal;
     }
 
     // ONE-CLICK INITIAL DATA SEEDER
@@ -547,13 +575,18 @@
         { user_id: uid, friend_name: "Gupta", phone: "919599930366", entry_type: "given", amount: 155, account_name: "Opening Balance", note: "Initial pending udhaar (Part 2)", entry_date: "2026-11-25" }
       ];
 
-      const [r1, r2, r3] = await Promise.all([
+      const fuelPayload = [
+        { user_id: uid, fill_date: "2026-11-25", price_per_l: 107.47, amount: 333, filled_l: 3.10, km_range: 118.9, mileage: 38.35, account_name: "Cash in Hand" }
+      ];
+
+      const [r1, r2, r3, r4] = await Promise.all([
         sb.from("finance_accounts").insert(accountsPayload),
         sb.from("finance_recurring").insert(recurringPayload),
-        sb.from("finance_friends").insert(friendsPayload)
+        sb.from("finance_friends").insert(friendsPayload),
+        sb.from("finance_fuel").insert(fuelPayload)
       ]);
 
-      const err = r1.error || r2.error || r3.error;
+      const err = r1.error || r2.error || r3.error || r4.error;
       if (err) {
         alert("Supabase Error: " + err.message);
         btn.disabled = false;
@@ -567,7 +600,6 @@
     // HELPER: FORMAT CURRENCY
     const fmt = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-    // HELPER: DAYS UNTIL DUE DATE
     function getDaysUntil(dueDay) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -639,7 +671,6 @@
         });
       }
 
-      // Upcoming 5-day, 2-day, 0-day Reminders (EMIs + Cards)
       const upcomingItems = [];
       state.recurring.forEach(r => {
         const cycle = getTargetCycleMonth(r.due_day);
@@ -703,10 +734,22 @@
           `;
         }).join("");
 
-      // Recent Transactions
-      document.getElementById("recentTxContainer").innerHTML = state.transactions.length === 0
-        ? `<p style="font-size:0.84rem; color:var(--muted);">No transactions logged yet. Use the + Add tab below.</p>`
-        : state.transactions.slice(0, 8).map(t => {
+      // Filtered Transactions
+      const filterYm = document.getElementById("monthFilter").value || "ALL";
+      const filteredTxs = filterYm === "ALL" ? state.transactions : state.transactions.filter(t => t.tx_date && t.tx_date.startsWith(filterYm));
+
+      let mIn = 0, mPersonalOut = 0, mFamilyOut = 0;
+      filteredTxs.forEach(t => {
+        if (t.tx_type === "income" || t.tx_type === "papa_support") mIn += Number(t.amount);
+        else if (t.tx_type === "expense") mPersonalOut += Number(t.amount);
+        else if (t.tx_type === "family_order") mFamilyOut += Number(t.amount);
+      });
+
+      document.getElementById("monthSummaryStrip").innerHTML = `Inflow: <b class="text-green">${fmt(mIn)}</b> • Personal Spend: <b class="text-red">${fmt(mPersonalOut)}</b> • Family: <b>${fmt(mFamilyOut)}</b>`;
+
+      document.getElementById("recentTxContainer").innerHTML = filteredTxs.length === 0
+        ? `<p style="font-size:0.84rem; color:var(--muted);">No transactions logged for this period.</p>`
+        : filteredTxs.map(t => {
           const isPositive = t.tx_type === "income" || t.tx_type === "papa_support";
           return `
             <div class="list-item">
@@ -714,13 +757,49 @@
                 <div class="item-title">${t.category} ${t.note ? `— ${t.note}` : ""}</div>
                 <div class="item-sub">${t.tx_date} • ${t.account_name || ""}</div>
               </div>
-              <div class="stat-val ${isPositive ? 'text-green' : ''}">${isPositive ? '+' : '-'}${fmt(t.amount)}</div>
+              <div style="display:flex; align-items:center;">
+                <div class="stat-val ${isPositive ? 'text-green' : ''}">${isPositive ? '+' : '-'}${fmt(t.amount)}</div>
+                <button class="del-btn" title="Delete & Revert Balance" onclick="deleteTransaction('${t.id}')">×</button>
+              </div>
             </div>
           `;
         }).join("");
     }
 
+    // DELETE & REVERT TRANSACTION
+    async function deleteTransaction(id) {
+      const t = state.transactions.find(x => x.id === id);
+      if (!t) return;
+      if (!confirm(`Delete "${t.category}" (${fmt(t.amount)}) and revert account balance?`)) return;
+
+      // Revert balance if single account
+      if (!t.account_name.includes("→")) {
+        const acc = state.accounts.find(a => a.name === t.account_name);
+        if (acc) {
+          let revertedBal = Number(acc.balance);
+          if (t.tx_type === "expense" || (t.tx_type === "family_order" && t.family_mode !== "papa_cash")) {
+            revertedBal = acc.account_type === "credit_card" ? revertedBal - Number(t.amount) : revertedBal + Number(t.amount);
+          } else if (t.tx_type === "income" || t.tx_type === "papa_support") {
+            revertedBal = revertedBal - Number(t.amount);
+          }
+          await sb.from("finance_accounts").update({ balance: revertedBal }).eq("id", acc.id);
+        }
+        if (t.tx_type === "family_order" && t.family_mode === "card_plus_cash") {
+          const cashAcc = state.accounts.find(a => a.account_type === "cash");
+          if (cashAcc) await sb.from("finance_accounts").update({ balance: Number(cashAcc.balance) - Number(t.amount) }).eq("id", cashAcc.id);
+        }
+      }
+
+      await sb.from("finance_transactions").delete().eq("id", id);
+      await loadAllData();
+    }
+
     // JUPITER FUEL & MILEAGE ENGINE
+    function saveStickyFuelAccount() {
+      const val = document.getElementById("fuelAccount").value;
+      if (val) localStorage.setItem("clearflow_sticky_fuel_acc", val);
+    }
+
     function calcFuelPreview() {
       const amt = Number(document.getElementById("fuelAmount").value);
       const km = Number(document.getElementById("fuelKm").value);
@@ -741,6 +820,10 @@
       const fuelAccSel = document.getElementById("fuelAccount");
       if (fuelAccSel) {
         fuelAccSel.innerHTML = state.accounts.map(a => `<option value="${a.name}">${a.name}</option>`).join("");
+        const stickyAcc = localStorage.getItem("clearflow_sticky_fuel_acc") || (state.fuel[0]?.account_name);
+        if (stickyAcc && Array.from(fuelAccSel.options).some(o => o.value === stickyAcc)) {
+          fuelAccSel.value = stickyAcc;
+        }
       }
 
       const savedPrice = localStorage.getItem("clearflow_fuel_price") || (state.fuel[0]?.price_per_l) || "107.47";
@@ -749,17 +832,23 @@
       document.getElementById("fuelPriceBadge").textContent = `₹${savedPrice}/L`;
 
       if (state.fuel.length === 0) {
-        document.getElementById("fuelHistoryContainer").innerHTML = `<p style="font-size:0.84rem; color:var(--muted);">No new petrol fills logged yet. Last Excel entry: 20 Nov 2026 (₹337.15, 147.2 km, 47 km/l).</p>`;
+        document.getElementById("lastFuelRefBanner").textContent = "Last Excel Record: 20 Nov 2026 • 147.2 km (47 km/l)";
+        document.getElementById("fuelHistoryContainer").innerHTML = `<p style="font-size:0.84rem; color:var(--muted);">No petrol fills logged in cloud yet.</p>`;
         return;
       }
 
       const totalKm = state.fuel.reduce((s, f) => s + Number(f.km_range), 0);
       const totalL = state.fuel.reduce((s, f) => s + Number(f.filled_l), 0);
+      const totalSpend = state.fuel.reduce((s, f) => s + Number(f.amount), 0);
       const overallAvg = totalL > 0 ? (totalKm / totalL).toFixed(1) : "0";
+      const costPerKm = totalKm > 0 ? (totalSpend / totalKm).toFixed(2) : "0";
       const latest = state.fuel[0];
 
       document.getElementById("overallAvgMileage").textContent = `${overallAvg} km/l`;
       document.getElementById("lastFillMileage").textContent = `${Number(latest.mileage).toFixed(1)} km/l`;
+      document.getElementById("fuelCostPerKm").textContent = `₹${costPerKm}/km`;
+      document.getElementById("totalFuelSpendLabel").textContent = `Total: ${fmt(totalSpend)}`;
+      document.getElementById("lastFuelRefBanner").innerHTML = `Last Fill: <b>${latest.fill_date}</b> • ${latest.km_range} km • ${latest.filled_l} L (${Number(latest.mileage).toFixed(1)} km/l)`;
 
       document.getElementById("fuelHistoryContainer").innerHTML = state.fuel.map(f => {
         const dayName = new Date(f.fill_date).toLocaleDateString("en-IN", { weekday: "short" });
@@ -770,9 +859,12 @@
               <div class="item-title">${f.fill_date} (${dayName}) • ${fmt(f.amount)}</div>
               <div class="item-sub">${f.filled_l} L @ ₹${f.price_per_l}/L • Range: <b>${f.km_range} km</b></div>
             </div>
-            <div style="text-align:right;">
-              <span class="badge ${avgBadge}" style="font-size:0.82rem;">${Number(f.mileage).toFixed(1)} km/l</span>
-              <div class="item-sub" style="margin-top:3px;">${f.account_name || ""}</div>
+            <div style="display:flex; align-items:center;">
+              <div style="text-align:right;">
+                <span class="badge ${avgBadge}" style="font-size:0.8rem;">${Number(f.mileage).toFixed(1)} km/l</span>
+                <div class="item-sub" style="margin-top:2px;">${f.account_name || ""}</div>
+              </div>
+              <button class="del-btn" title="Delete Fuel Entry" onclick="deleteFuelEntry('${f.id}')">×</button>
             </div>
           </div>
         `;
@@ -792,6 +884,7 @@
       btn.disabled = true; btn.textContent = "Saving...";
 
       localStorage.setItem("clearflow_fuel_price", price_per_l);
+      localStorage.setItem("clearflow_sticky_fuel_acc", account_name);
 
       const filled_l = Number((amount / price_per_l).toFixed(2));
       const mileage = Number((km_range / filled_l).toFixed(2));
@@ -826,6 +919,20 @@
       document.getElementById("fuelKm").value = "";
       document.getElementById("fuelLivePreview").style.display = "none";
       btn.disabled = false; btn.textContent = "Save Petrol & Update Mileage";
+      await loadAllData();
+    }
+
+    async function deleteFuelEntry(id) {
+      const f = state.fuel.find(x => x.id === id);
+      if (!f) return;
+      if (!confirm(`Delete petrol entry of ${fmt(f.amount)} (${f.fill_date}) and revert balance?`)) return;
+
+      const acc = state.accounts.find(a => a.name === f.account_name);
+      if (acc) {
+        const revertedBal = acc.account_type === "credit_card" ? Number(acc.balance) - Number(f.amount) : Number(acc.balance) + Number(f.amount);
+        await sb.from("finance_accounts").update({ balance: revertedBal }).eq("id", acc.id);
+      }
+      await sb.from("finance_fuel").delete().eq("id", id);
       await loadAllData();
     }
 
@@ -878,10 +985,11 @@
               <div class="item-sub">${r.source_note || ""}</div>
               <div style="margin-top:4px;">${statusHtml}</div>
             </div>
-            <div>
+            <div style="display:flex; gap:5px; align-items:center;">
+              <button class="icon-btn" onclick="openEditRecurringModal('${r.id}')">Edit</button>
               ${isPaid
                 ? `<button class="btn btn-sm btn-outline" onclick="unmarkRecurring('${r.id}')">Undo</button>`
-                : `<button class="btn btn-sm btn-success" onclick="openPayRecurringModal('${r.id}')">✓ Mark Paid</button>`
+                : `<button class="btn btn-sm btn-success" onclick="openPayRecurringModal('${r.id}')">✓ Paid</button>`
               }
             </div>
           </div>
@@ -930,14 +1038,24 @@
             <div class="item-title">${f.friend_name} — ${f.entry_type === 'given' ? 'Gave Money' : 'Received Back'}</div>
             <div class="item-sub">${f.entry_date} ${f.note ? `• ${f.note}` : ""}</div>
           </div>
-          <div class="stat-val ${f.entry_type === 'given' ? 'text-red' : 'text-green'}">
-            ${f.entry_type === 'given' ? '-' : '+'}${fmt(f.amount)}
+          <div style="display:flex; align-items:center;">
+            <div class="stat-val ${f.entry_type === 'given' ? 'text-red' : 'text-green'}">
+              ${f.entry_type === 'given' ? '-' : '+'}${fmt(f.amount)}
+            </div>
+            <button class="del-btn" title="Delete Friend Entry" onclick="deleteFriendEntry('${f.id}')">×</button>
           </div>
         </div>
       `).join("");
     }
 
-    // ONE-CLICK PROFESSIONAL WHATSAPP REMINDER
+    async function deleteFriendEntry(id) {
+      const f = state.friends.find(x => x.id === id);
+      if (!f) return;
+      if (!confirm(`Delete ${f.friend_name}'s entry of ${fmt(f.amount)}?`)) return;
+      await sb.from("finance_friends").delete().eq("id", id);
+      await loadAllData();
+    }
+
     function sendFriendWhatsApp(name, pendingAmount, savedPhone) {
       let cleanPhone = (savedPhone || "").replace(/\D/g, "");
       if (!cleanPhone) {
@@ -1023,7 +1141,7 @@
       await loadAllData();
     }
 
-    // QUICK ENTRY FORM DYNAMIC OPTIONS
+    // QUICK ENTRY FORM DYNAMIC OPTIONS (WITH STICKY ACCOUNT MEMORY)
     function updateFormFields() {
       const type = document.getElementById("txType").value;
       const catGroup = document.getElementById("categoryGroup");
@@ -1042,7 +1160,7 @@
       catGroup.style.display = (type === "cc_payment" || type === "transfer") ? "none" : "block";
 
       if (type === "expense") {
-        catSel.innerHTML = ["Petrol", "Outside Food / Chai", "Travel (Auto/Metro/Cab)", "Bills & Recharges", "Shopping / Personal", "Other Expense"].map(c => `<option>${c}</option>`).join("");
+        catSel.innerHTML = ["Outside Food / Chai", "Petrol", "Travel (Auto/Metro/Cab)", "Bills & Recharges", "Shopping / Personal", "Other Expense"].map(c => `<option>${c}</option>`).join("");
         document.getElementById("accountLabel").textContent = "Paid Via (Bank / Cash / Credit Card)";
         accSel.innerHTML = allAccs.map(a => `<option>${a}</option>`).join("");
       } else if (type === "family_order") {
@@ -1068,6 +1186,11 @@
         document.getElementById("toAccountLabel").textContent = "To Account";
         toSel.innerHTML = banksAndCash.map(a => `<option>${a}</option>`).join("");
       }
+
+      const lastAcc = localStorage.getItem("clearflow_sticky_tx_acc");
+      if (lastAcc && Array.from(accSel.options).some(o => o.value === lastAcc)) {
+        accSel.value = lastAcc;
+      }
     }
 
     function addChip(val) {
@@ -1075,7 +1198,7 @@
       el.value = (Number(el.value || 0) + val);
     }
 
-    // SUBMIT TRANSACTION & AUTO-UPDATE BALANCES
+    // SUBMIT TRANSACTION
     async function submitTransaction() {
       const type = document.getElementById("txType").value;
       const amount = Number(document.getElementById("txAmount").value);
@@ -1089,6 +1212,8 @@
       if (!amount || amount <= 0) return alert("Please enter a valid amount.");
       const btn = document.getElementById("saveTxBtn");
       btn.disabled = true; btn.textContent = "Saving...";
+
+      localStorage.setItem("clearflow_sticky_tx_acc", accountName);
 
       const acc = state.accounts.find(a => a.name === accountName);
       if (type === "expense") {
@@ -1199,6 +1324,41 @@
       await loadAllData();
     }
 
+    function openEditRecurringModal(id) {
+      const r = state.recurring.find(x => x.id === id);
+      document.getElementById("modalBody").innerHTML = `
+        <h3 style="margin-bottom:12px;">Edit ${r.title}</h3>
+        <div class="form-group"><label>Title</label><input type="text" id="edRecTitle" value="${r.title}" /></div>
+        <div class="form-group"><label>Amount (₹)</label><input type="number" step="0.01" id="edRecAmt" value="${r.amount}" /></div>
+        <div class="form-group"><label>Due Day (1-31)</label><input type="number" id="edRecDay" value="${r.due_day}" /></div>
+        <div class="form-group"><label>Source Note</label><input type="text" id="edRecNote" value="${r.source_note || ''}" /></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);" onclick="deleteRecurring('${r.id}')">Delete</button>
+          <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="saveRecurringEdit('${r.id}')">Save</button>
+        </div>
+      `;
+      document.getElementById("actionModal").classList.add("open");
+    }
+
+    async function saveRecurringEdit(id) {
+      await sb.from("finance_recurring").update({
+        title: document.getElementById("edRecTitle").value.trim(),
+        amount: Number(document.getElementById("edRecAmt").value),
+        due_day: Number(document.getElementById("edRecDay").value),
+        source_note: document.getElementById("edRecNote").value.trim()
+      }).eq("id", id);
+      closeModal();
+      await loadAllData();
+    }
+
+    async function deleteRecurring(id) {
+      if (!confirm("Delete this recurring EMI/Interest permanently?")) return;
+      await sb.from("finance_recurring").delete().eq("id", id);
+      closeModal();
+      await loadAllData();
+    }
+
     function openEditCardModal(id) {
       const c = state.accounts.find(x => x.id === id);
       document.getElementById("modalBody").innerHTML = `
@@ -1290,7 +1450,7 @@
     }
 
     // AUTO-UPDATE ENGINE FOR iPHONE HOME SCREEN APP
-    const APP_VERSION = "1.3.0";
+    const APP_VERSION = "1.4.0";
 
     async function checkForAppUpdate(manual = false) {
       const btn = document.getElementById("syncBtn");
