@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ClearFlow" />
+  <title>ClearFlow — Personal Cash-Flow & Debt Guard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-soft: rgba(37, 99, 235, 0.1);
+      --success: #10b981;
+      --success-soft: rgba(16, 185, 129, 0.12);
+      --warning: #f59e0b;
+      --warning-soft: rgba(245, 158, 11, 0.14);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.12);
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b0f17;
+      --card: #151c28;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: #252f3f;
+      --primary: #3b82f6;
+      --primary-soft: rgba(59, 130, 246, 0.15);
+      --success: #34d399;
+      --success-soft: rgba(52, 211, 153, 0.15);
+      --warning: #fbbf24;
+      --warning-soft: rgba(251, 191, 36, 0.15);
+      --danger: #f87171;
+      --danger-soft: rgba(248, 113, 113, 0.15);
+      --shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 85px; transition: background 0.25s, color 0.25s; overflow-x: hidden; }
+    
+    /* Header */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.3px; }
+    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .icon-btn {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 10px; border-radius: 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+
+    /* Container */
+    .container { max-width: 680px; margin: 0 auto; padding: 14px; }
+
+    /* Cards & Grids */
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 15px; margin-bottom: 14px; box-shadow: var(--shadow);
+    }
+    .card-title { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-box { background: var(--bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); }
+    .stat-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .stat-val { font-size: 1.1rem; font-weight: 800; }
+    .text-green { color: var(--success); }
+    .text-red { color: var(--danger); }
+    .text-amber { color: var(--warning); }
+    .text-blue { color: var(--primary); }
+
+    /* Alerts & Coach */
+    .alert-banner {
+      padding: 11px 13px; border-radius: 12px; font-size: 0.84rem; line-height: 1.4;
+      margin-bottom: 10px; border-left: 4px solid; display: flex; flex-direction: column; gap: 3px;
+    }
+    .alert-danger { background: var(--danger-soft); border-color: var(--danger); }
+    .alert-warning { background: var(--warning-soft); border-color: var(--warning); }
+    .alert-info { background: var(--primary-soft); border-color: var(--primary); }
+    .alert-success { background: var(--success-soft); border-color: var(--success); }
+
+    /* Lists */
+    .list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 0; border-bottom: 1px solid var(--border); gap: 10px;
+    }
+    .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .item-main { flex: 1; min-width: 0; }
+    .item-title { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+    .badge {
+      display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+    }
+    .badge-red { background: var(--danger-soft); color: var(--danger); }
+    .badge-amber { background: var(--warning-soft); color: var(--warning); }
+    .badge-green { background: var(--success-soft); color: var(--success); }
+    .badge-blue { background: var(--primary-soft); color: var(--primary); }
+
+    /* Forms */
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+    select, input {
+      width: 100%; padding: 11px 12px; border-radius: 11px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-size: 0.95rem; outline: none;
+    }
+    select:focus, input:focus { border-color: var(--primary); }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .chip {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 5px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .btn {
+      width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 0.95rem;
+      font-weight: 700; cursor: pointer; background: var(--primary); color: #fff;
+    }
+    .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 8px; width: auto; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-success { background: var(--success); color: #fff; }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: var(--card); border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 4px 12px;
+    }
+    .nav-btn {
+      background: none; border: none; color: var(--muted); font-size: 0.7rem; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
+    }
+    .nav-btn.active { color: var(--primary); font-weight: 800; }
+    .nav-icon { font-size: 1.2rem; }
+
+    /* Views & Modal */
+    .view { display: none; }
+    .view.active { display: block; }
+    .login-box { max-width: 400px; margin: 60px auto; padding: 20px; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100;
+      display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card { background: var(--card); border-radius: 16px; padding: 18px; width: 100%; max-width: 440px; border: 1px solid var(--border); max-height: 85vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="authScreen" class="login-box" style="display:none;">
+    <div class="card">
+      <div class="brand" style="margin-bottom:6px; font-size:1.4rem;"><span class="brand-dot"></span> ClearFlow</div>
+      <p style="font-size:0.84rem; color:var(--muted); margin-bottom:18px;">Private Cloud Cash-Flow & Debt Control</p>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="Enter your email" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="Enter your password" />
+      </div>
+      <button class="btn" onclick="handleLogin()" id="loginBtn">Unlock ClearFlow</button>
+      <p id="loginError" class="text-red" style="font-size:0.8rem; margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="appScreen" style="display:none;">
+    <header class="topbar">
+      <div class="brand"><span class="brand-dot"></span> ClearFlow</div>
+      <div class="top-actions">
+        <button class="icon-btn" id="themeBtn" onclick="cycleTheme()">Theme: Auto</button>
+        <button class="icon-btn" onclick="handleLogout()">Lock</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- SETUP PROMPT IF EMPTY -->
+      <div id="seedBanner" class="card" style="display:none; border-color: var(--primary);">
+        <h3 style="font-size:1rem; margin-bottom:6px;">Welcome, Abhishek!</h3>
+        <p style="font-size:0.84rem; color:var(--muted); margin-bottom:12px;">Your cloud database is connected and empty. Load your pre-configured Banks (Kotak, Canara, BOB), 4 Credit Cards, Fixed EMIs, 10th Interests, and Friends Ledger in one tap.</p>
+        <button class="btn" onclick="seedInitialData()" id="seedBtn">Load My Initial Financial Data</button>
+      </div>
+
+      <!-- TAB 1: DASHBOARD -->
+      <div id="view-home" class="view active">
+        <div class="card">
+          <div class="card-title"><span>Net Liquidity Snapshot</span><span id="todayDateLabel"></span></div>
+          <div class="grid-2">
+            <div class="stat-box">
+              <div class="stat-label">Total Bank + Cash</div>
+              <div class="stat-val text-green" id="totalLiquidVal">₹0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Billed CC O/S</div>
+              <div class="stat-val text-red" id="totalCcVal">₹0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Net True Position</div>
+              <div class="stat-val" id="netWorthVal">₹0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Friends Receivable</div>
+              <div class="stat-val text-blue" id="friendsTotalVal">₹0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SMART CASH-FLOW COACH -->
+        <div class="card">
+          <div class="card-title"><span>Smart Cash-Flow Coach & Alerts</span><span>LIVE</span></div>
+          <div id="coachContainer"></div>
+        </div>
+
+        <!-- UPCOMING EMIS & DUE DATES -->
+        <div class="card">
+          <div class="card-title"><span>Upcoming Dues & Reminders</span><button class="icon-btn" onclick="switchTab('dues')">View All</button></div>
+          <div id="upcomingDuesContainer"></div>
+        </div>
+
+        <!-- BANK & CASH BALANCES -->
+        <div class="card">
+          <div class="card-title"><span>Banks & Cash in Hand</span><button class="icon-btn" onclick="openAdjustModal()">Edit Balances</button></div>
+          <div id="bankListContainer"></div>
+        </div>
+
+        <!-- RECENT TRANSACTIONS -->
+        <div class="card">
+          <div class="card-title"><span>Recent Activity</span></div>
+          <div id="recentTxContainer"></div>
+        </div>
+      </div>
+
+      <!-- TAB 2: QUICK ADD -->
+      <div id="view-add" class="view">
+        <div class="card">
+          <div class="card-title"><span>Quick Entry (Zero-Typing)</span></div>
+          
+          <div class="form-group">
+            <label>Entry Type</label>
+            <select id="txType" onchange="updateFormFields()">
+              <option value="expense">Personal Expense</option>
+              <option value="family_order">Family Order (Ghar Ka Saman)</option>
+              <option value="income">Income (Salary / Retainer / Freelance)</option>
+              <option value="papa_support">Received from Papa (Support)</option>
+              <option value="cc_payment">Pay Credit Card Bill</option>
+              <option value="transfer">Self Transfer (Bank ↔ Cash)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" id="txAmount" placeholder="0.00" step="0.01" />
+            <div class="chip-row">
+              <button type="button" class="chip" onclick="addChip(50)">+50</button>
+              <button type="button" class="chip" onclick="addChip(100)">+100</button>
+              <button type="button" class="chip" onclick="addChip(200)">+200</button>
+              <button type="button" class="chip" onclick="addChip(500)">+500</button>
+              <button type="button" class="chip" onclick="addChip(1000)">+1000</button>
+            </div>
+          </div>
+
+          <div class="form-group" id="categoryGroup">
+            <label>Category</label>
+            <select id="txCategory"></select>
+          </div>
+
+          <div class="form-group" id="familyModeGroup" style="display:none;">
+            <label>Family Order Payment & Cash Status</label>
+            <select id="txFamilyMode">
+              <option value="card_plus_cash">Paid via Card + Cash Received from Family</option>
+              <option value="no_cash">Paid via Card/UPI (No Cash Received)</option>
+              <option value="papa_cash">Paid using Papa's Cash (No Personal Impact)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="accountGroup">
+            <label id="accountLabel">Payment Account / Card</label>
+            <select id="txAccount"></select>
+          </div>
+
+          <div class="form-group" id="toAccountGroup" style="display:none;">
+            <label id="toAccountLabel">To Account / Card</label>
+            <select id="txToAccount"></select>
+          </div>
+
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="txDate" />
+          </div>
+
+          <div class="form-group">
+            <label>Quick Note (Optional)</label>
+            <input type="text" id="txNote" placeholder="e.g., Bike petrol, Chai, Amazon order..." />
+          </div>
+
+          <button class="btn" onclick="submitTransaction()" id="saveTxBtn">Save Entry to Cloud</button>
+        </div>
+      </div>
+
+      <!-- TAB 3: CREDIT CARDS -->
+      <div id="view-cards" class="view">
+        <div class="card">
+          <div class="card-title"><span>Credit Cards Control</span></div>
+          <div id="cardsListContainer"></div>
+        </div>
+      </div>
+
+      <!-- TAB 4: DUES & EMIs -->
+      <div id="view-dues" class="view">
+        <div class="card">
+          <div class="card-title">
+            <span>Fixed EMIs & 10th Interests</span>
+            <button class="icon-btn" onclick="openAddRecurringModal()">+ Add New</button>
+          </div>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">
+            Tick when paid (even in advance) — auto-records exact payment date and clears reminders for this month.
+          </p>
+          <div id="allRecurringContainer"></div>
+        </div>
+      </div>
+
+      <!-- TAB 5: FRIENDS LEDGER -->
+      <div id="view-friends" class="view">
+        <div class="card">
+          <div class="card-title">
+            <span>Friends Udhaar Ledger</span>
+            <button class="icon-btn" onclick="openFriendEntryModal()">+ Add Entry</button>
+          </div>
+          <div id="friendsSummaryContainer"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span>Friend Transaction History</span></div>
+          <div id="friendsHistoryContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" id="nav-home" onclick="switchTab('home')"><span class="nav-icon">📊</span>Home</button>
+      <button class="nav-btn" id="nav-add" onclick="switchTab('add')"><span class="nav-icon">➕</span>Add</button>
+      <button class="nav-btn" id="nav-cards" onclick="switchTab('cards')"><span class="nav-icon">💳</span>Cards</button>
+      <button class="nav-btn" id="nav-dues" onclick="switchTab('dues')"><span class="nav-icon">📅</span>EMIs</button>
+      <button class="nav-btn" id="nav-friends" onclick="switchTab('friends')"><span class="nav-icon">🤝</span>Friends</button>
+    </nav>
+  </div>
+
+  <!-- MODAL FOR ACTIONS -->
+  <div id="actionModal" class="modal-backdrop">
+    <div class="modal-card" id="modalBody"></div>
+  </div>
+
+  <script>
+    // SUPABASE CONFIGURATION
+    const SUPABASE_URL = "https://rcfmegugwirkoxmxmnuc.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_L8nCURCi7k6cQu8J8LZLqg_IKtdy7gd";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let state = { accounts: [], recurring: [], transactions: [], friends: [] };
+
+    // THEME ENGINE (Auto System Sync + Manual Override)
+    let themeMode = localStorage.getItem("clearflow_theme") || "auto";
+    function applyTheme() {
+      const btn = document.getElementById("themeBtn");
+      if (themeMode === "auto") {
+        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+        if (btn) btn.textContent = "Theme: Auto";
+      } else {
+        document.documentElement.setAttribute("data-theme", themeMode);
+        if (btn) btn.textContent = themeMode === "dark" ? "Theme: Dark" : "Theme: Light";
+      }
+    }
+    function cycleTheme() {
+      themeMode = themeMode === "auto" ? "light" : themeMode === "light" ? "dark" : "auto";
+      localStorage.setItem("clearflow_theme", themeMode);
+      applyTheme();
+    }
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (themeMode === "auto") applyTheme(); });
+    applyTheme();
+
+    // AUTH INITIALIZATION
+    async function initAuth() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        showApp();
+      } else {
+        document.getElementById("authScreen").style.display = "block";
+        document.getElementById("appScreen").style.display = "none";
+      }
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPass").value;
+      const errEl = document.getElementById("loginError");
+      const btn = document.getElementById("loginBtn");
+      errEl.textContent = "";
+      btn.textContent = "Verifying...";
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      btn.textContent = "Unlock ClearFlow";
+      if (error) {
+        errEl.textContent = error.message;
+      } else {
+        currentUser = data.user;
+        showApp();
+      }
+    }
+
+    async function handleLogout() {
+      await sb.auth.signOut();
+      location.reload();
+    }
+
+    async function showApp() {
+      document.getElementById("authScreen").style.display = "none";
+      document.getElementById("appScreen").style.display = "block";
+      document.getElementById("txDate").value = new Date().toISOString().split("T")[0];
+      document.getElementById("todayDateLabel").textContent = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      await loadAllData();
+      updateFormFields();
+    }
+
+    // LOAD DATA FROM SUPABASE
+    async function loadAllData() {
+      const [accRes, recRes, txRes, frRes] = await Promise.all([
+        sb.from("finance_accounts").select("*").order("name"),
+        sb.from("finance_recurring").select("*").order("due_day"),
+        sb.from("finance_transactions").select("*").order("tx_date", { ascending: false }).order("created_at", { ascending: false }).limit(25),
+        sb.from("finance_friends").select("*").order("entry_date", { ascending: false })
+      ]);
+
+      state.accounts = accRes.data || [];
+      state.recurring = recRes.data || [];
+      state.transactions = txRes.data || [];
+      state.friends = frRes.data || [];
+
+      document.getElementById("seedBanner").style.display = state.accounts.length === 0 ? "block" : "none";
+      renderDashboard();
+      renderCards();
+      renderRecurring();
+      renderFriends();
+    }
+
+    // ONE-CLICK INITIAL DATA SEEDER
+    async function seedInitialData() {
+      const btn = document.getElementById("seedBtn");
+      btn.disabled = true;
+      btn.textContent = "Loading your accounts & EMIs...";
+      const uid = currentUser.id;
+
+      const accountsPayload = [
+        { user_id: uid, name: "Kotak Bank", account_type: "bank", balance: 442.49 },
+        { user_id: uid, name: "Canara Bank", account_type: "bank", balance: 1355.18 },
+        { user_id: uid, name: "BOB Bank", account_type: "bank", balance: 13669.84 },
+        { user_id: uid, name: "Cash in Hand", account_type: "cash", balance: 0 },
+        { user_id: uid, name: "Axis CC", account_type: "credit_card", balance: 0, unbilled_amount: 0, bill_day: 15, due_day: 2, last_paid_note: "Paid ₹4,151 on 25 Nov 2026" },
+        { user_id: uid, name: "IDFC CC", account_type: "credit_card", balance: 0, unbilled_amount: 0, bill_day: 18, due_day: 4, last_paid_note: "Paid ₹2,227.11 (iPhone EMI 1/24) on 25 Nov 2026" },
+        { user_id: uid, name: "Canara CC", account_type: "credit_card", balance: 2412, unbilled_amount: 0, bill_day: 19, due_day: 8, last_paid_note: "Due on 8th" },
+        { user_id: uid, name: "HDFC CC", account_type: "credit_card", balance: 22430.58, unbilled_amount: 4136, bill_day: 21, due_day: 11, last_paid_note: "Due 9th-11th (11 Dec this cycle)" }
+      ];
+
+      const recurringPayload = [
+        { user_id: uid, title: "Muthoot Personal Loan", category: "emi", amount: 7000, due_day: 2, source_note: "Papa's Bank (Transfer or Papa manages)" },
+        { user_id: uid, title: "Jupiter EMI", category: "emi", amount: 3895, due_day: 3, source_note: "Your Bank", last_paid_month: "2026-12", last_paid_date: "2026-11-18", paid_by_mode: "Paid in Advance" },
+        { user_id: uid, title: "Home Loan EMI", category: "emi", amount: 22000, due_day: 4, source_note: "Papa's Bank (Transfer or Papa manages)" },
+        { user_id: uid, title: "Gupta (Interest)", category: "interest", amount: 4000, due_day: 10, source_note: "Monthly Borrow Interest" },
+        { user_id: uid, title: "Model (Interest)", category: "interest", amount: 1500, due_day: 10, source_note: "Monthly Borrow Interest" },
+        { user_id: uid, title: "Murti Wale (Interest)", category: "interest", amount: 2500, due_day: 10, source_note: "Monthly Borrow Interest" },
+        { user_id: uid, title: "Gao (Interest)", category: "interest", amount: 1500, due_day: 10, source_note: "Monthly Borrow Interest" },
+        { user_id: uid, title: "Auto EMI", category: "emi", amount: 19500, due_day: 27, source_note: "Your Bank / Auto Earnings" }
+      ];
+
+      const friendsPayload = [
+        { user_id: uid, friend_name: "Chakku", entry_type: "given", amount: 200, account_name: "Opening Balance", note: "Initial pending udhaar", entry_date: "2026-11-25" },
+        { user_id: uid, friend_name: "Gupta", entry_type: "given", amount: 912, account_name: "Opening Balance", note: "Initial pending udhaar (Part 1)", entry_date: "2026-11-25" },
+        { user_id: uid, friend_name: "Gupta", entry_type: "given", amount: 155, account_name: "Opening Balance", note: "Initial pending udhaar (Part 2)", entry_date: "2026-11-25" }
+      ];
+
+      await sb.from("finance_accounts").insert(accountsPayload);
+      await sb.from("finance_recurring").insert(recurringPayload);
+      await sb.from("finance_friends").insert(friendsPayload);
+
+      await loadAllData();
+    }
+
+    // HELPER: FORMAT CURRENCY
+    const fmt = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    // HELPER: DAYS UNTIL DUE DATE
+    function getDaysUntil(dueDay) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let target = new Date(today.getFullYear(), today.getMonth(), dueDay);
+      if (target < today) {
+        target = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
+      }
+      return Math.round((target - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function getTargetCycleMonth(dueDay) {
+      const today = new Date();
+      let target = new Date(today.getFullYear(), today.getMonth(), dueDay);
+      if (target < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        target = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
+      }
+      return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    // RENDER DASHBOARD & SMART COACH
+    function renderDashboard() {
+      const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card");
+      const cards = state.accounts.filter(a => a.account_type === "credit_card");
+
+      const totalLiquid = banksAndCash.reduce((s, a) => s + Number(a.balance), 0);
+      const totalBilledCC = cards.reduce((s, c) => s + Number(c.balance), 0);
+      const totalUnbilledCC = cards.reduce((s, c) => s + Number(c.unbilled_amount || 0), 0);
+      const netPos = totalLiquid - totalBilledCC;
+
+      // Friends total
+      let friendsPending = 0;
+      state.friends.forEach(f => {
+        friendsPending += f.entry_type === "given" ? Number(f.amount) : -Number(f.amount);
+      });
+
+      document.getElementById("totalLiquidVal").textContent = fmt(totalLiquid);
+      document.getElementById("totalCcVal").textContent = fmt(totalBilledCC);
+      const netEl = document.getElementById("netWorthVal");
+      netEl.textContent = fmt(netPos);
+      netEl.className = "stat-val " + (netPos >= 0 ? "text-green" : "text-red");
+      document.getElementById("friendsTotalVal").textContent = fmt(friendsPending);
+
+      // Bank List
+      document.getElementById("bankListContainer").innerHTML = banksAndCash.map(b => `
+        <div class="list-item">
+          <div class="item-main">
+            <div class="item-title">${b.name}</div>
+            <div class="item-sub">${b.account_type === 'cash' ? 'Physical Wallet / Home Cash' : 'Bank Account'}</div>
+          </div>
+          <div class="stat-val ${Number(b.balance) > 0 ? 'text-green' : ''}">${fmt(b.balance)}</div>
+        </div>
+      `).join("");
+
+      // Smart Cash-Flow Coach Logic
+      const coachAlerts = [];
+      const cashAcc = banksAndCash.find(a => a.account_type === "cash");
+      if (cashAcc && Number(cashAcc.balance) >= 1000 && totalBilledCC > 0) {
+        coachAlerts.push({
+          type: "warning",
+          title: "Idle Cash Alert",
+          msg: `You have ${fmt(cashAcc.balance)} Cash in Hand. Deposit it into your bank to pay down your Credit Card dues.`
+        });
+      }
+
+      const hdfc = cards.find(c => c.name === "HDFC CC");
+      if (hdfc && Number(hdfc.balance) > 15000) {
+        coachAlerts.push({
+          type: "danger",
+          title: "HDFC CC Pause Recommended",
+          msg: `HDFC Billed O/S is ${fmt(hdfc.balance)} (+ ${fmt(hdfc.unbilled_amount)} unbilled). Avoid swiping HDFC CC until the 11th due date clears.`
+        });
+      }
+
+      // Upcoming 5-day, 2-day, 0-day Reminders (EMIs + Cards)
+      const upcomingItems = [];
+      state.recurring.forEach(r => {
+        const cycle = getTargetCycleMonth(r.due_day);
+        const isPaid = r.last_paid_month === cycle;
+        const daysLeft = getDaysUntil(r.due_day);
+        if (!isPaid && daysLeft <= 7) {
+          upcomingItems.push({ ...r, daysLeft, kind: "recurring" });
+          if (daysLeft === 0) {
+            coachAlerts.push({ type: "danger", title: `DUE TODAY: ${r.title}`, msg: `${fmt(r.amount)} is due today! Tick it in EMIs tab once paid.` });
+          } else if (daysLeft <= 2) {
+            coachAlerts.push({ type: "warning", title: `Due in ${daysLeft} Day(s): ${r.title}`, msg: `Keep ${fmt(r.amount)} ready (${r.source_note}).` });
+          } else if (daysLeft <= 5) {
+            coachAlerts.push({ type: "info", title: `Upcoming in ${daysLeft} Days: ${r.title}`, msg: `${fmt(r.amount)} due on ${r.due_day}th.` });
+          }
+        }
+      });
+
+      cards.forEach(c => {
+        if (Number(c.balance) > 0 && c.due_day) {
+          const daysLeft = getDaysUntil(c.due_day);
+          if (daysLeft <= 10) {
+            upcomingItems.push({ title: `${c.name} Bill`, amount: c.balance, due_day: c.due_day, daysLeft, kind: "card" });
+          }
+        }
+      });
+
+      upcomingItems.sort((a, b) => a.daysLeft - b.daysLeft);
+
+      if (totalBilledCC > totalLiquid) {
+        coachAlerts.push({
+          type: "info",
+          title: "Upcoming Liquidity Gap",
+          msg: `Billed CC dues (${fmt(totalBilledCC)}) exceed current bank balance (${fmt(totalLiquid)}) by ${fmt(totalBilledCC - totalLiquid)}. Plan allocation from 7th Salary (₹37,080) or Ankit's 10th Cash (₹20,000).`
+        });
+      }
+
+      if (coachAlerts.length === 0) {
+        coachAlerts.push({ type: "success", title: "Cash-Flow Looking Steady", msg: "No urgent 5-day dues pending. Keep logging daily expenses to protect your monthly surplus." });
+      }
+
+      document.getElementById("coachContainer").innerHTML = coachAlerts.map(a => `
+        <div class="alert-banner alert-${a.type}">
+          <strong>${a.title}</strong>
+          <span>${a.msg}</span>
+        </div>
+      `).join("");
+
+      document.getElementById("upcomingDuesContainer").innerHTML = upcomingItems.length === 0
+        ? `<p style="font-size:0.84rem; color:var(--muted);">No unpaid EMIs or CC bills due in the next 7 days.</p>`
+        : upcomingItems.map(u => {
+          const badgeClass = u.daysLeft === 0 ? "badge-red" : u.daysLeft <= 2 ? "badge-amber" : "badge-blue";
+          const dayText = u.daysLeft === 0 ? "DUE TODAY" : `In ${u.daysLeft}d (${u.due_day}th)`;
+          return `
+            <div class="list-item">
+              <div class="item-main">
+                <div class="item-title">${u.title}</div>
+                <div class="item-sub"><span class="badge ${badgeClass}">${dayText}</span></div>
+              </div>
+              <div class="stat-val">${fmt(u.amount)}</div>
+            </div>
+          `;
+        }).join("");
+
+      // Recent Transactions
+      document.getElementById("recentTxContainer").innerHTML = state.transactions.length === 0
+        ? `<p style="font-size:0.84rem; color:var(--muted);">No transactions logged yet. Use the + Add tab below.</p>`
+        : state.transactions.slice(0, 8).map(t => {
+          const isPositive = t.tx_type === "income" || t.tx_type === "papa_support";
+          return `
+            <div class="list-item">
+              <div class="item-main">
+                <div class="item-title">${t.category} ${t.note ? `— ${t.note}` : ""}</div>
+                <div class="item-sub">${t.tx_date} • ${t.account_name || ""}</div>
+              </div>
+              <div class="stat-val ${isPositive ? 'text-green' : ''}">${isPositive ? '+' : '-'}${fmt(t.amount)}</div>
+            </div>
+          `;
+        }).join("");
+    }
+
+    // RENDER CREDIT CARDS
+    function renderCards() {
+      const cards = state.accounts.filter(a => a.account_type === "credit_card");
+      document.getElementById("cardsListContainer").innerHTML = cards.map(c => `
+        <div class="list-item" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div class="item-title" style="font-size:1rem;">${c.name}</div>
+              <div class="item-sub">Bill Gen: ${c.bill_day}th • Due: ${c.due_day}th</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="stat-val ${Number(c.balance) > 0 ? 'text-red' : 'text-green'}">${fmt(c.balance)}</div>
+              ${Number(c.unbilled_amount) > 0 ? `<div class="item-sub text-amber">+ ${fmt(c.unbilled_amount)} unbilled</div>` : ""}
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <span class="item-sub">${c.last_paid_note || "Active"}</span>
+            <button class="icon-btn" onclick="openEditCardModal('${c.id}')">Update O/S or Due Date</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // RENDER RECURRING EMIs & INTERESTS
+    function renderRecurring() {
+      document.getElementById("allRecurringContainer").innerHTML = state.recurring.map(r => {
+        const cycle = getTargetCycleMonth(r.due_day);
+        const isPaid = r.last_paid_month === cycle;
+        const daysLeft = getDaysUntil(r.due_day);
+        let statusHtml = "";
+        if (isPaid) {
+          statusHtml = `<span class="badge badge-green">✓ Paid on ${r.last_paid_date} (${r.paid_by_mode || "Done"})</span>`;
+        } else if (daysLeft === 0) {
+          statusHtml = `<span class="badge badge-red">DUE TODAY (${r.due_day}th)</span>`;
+        } else if (daysLeft <= 2) {
+          statusHtml = `<span class="badge badge-amber">Due in ${daysLeft}d (${r.due_day}th)</span>`;
+        } else if (daysLeft <= 5) {
+          statusHtml = `<span class="badge badge-blue">Due in ${daysLeft}d (${r.due_day}th)</span>`;
+        } else {
+          statusHtml = `<span class="item-sub">Due: ${r.due_day}th of month</span>`;
+        }
+
+        return `
+          <div class="list-item">
+            <div class="item-main">
+              <div class="item-title">${r.title} <span style="font-weight:400; color:var(--muted);">(${fmt(r.amount)})</span></div>
+              <div class="item-sub">${r.source_note || ""}</div>
+              <div style="margin-top:4px;">${statusHtml}</div>
+            </div>
+            <div>
+              ${isPaid
+                ? `<button class="btn btn-sm btn-outline" onclick="unmarkRecurring('${r.id}')">Undo</button>`
+                : `<button class="btn btn-sm btn-success" onclick="openPayRecurringModal('${r.id}')">✓ Mark Paid</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // RENDER FRIENDS LEDGER
+    function renderFriends() {
+      const map = {};
+      state.friends.forEach(f => {
+        if (!map[f.friend_name]) map[f.friend_name] = { given: 0, returned: 0 };
+        if (f.entry_type === "given") map[f.friend_name].given += Number(f.amount);
+        else map[f.friend_name].returned += Number(f.amount);
+      });
+
+      const names = Object.keys(map);
+      document.getElementById("friendsSummaryContainer").innerHTML = names.length === 0
+        ? `<p style="font-size:0.84rem; color:var(--muted);">No friend records yet.</p>`
+        : names.map(name => {
+          const pending = map[name].given - map[name].returned;
+          return `
+            <div class="list-item">
+              <div class="item-main">
+                <div class="item-title">${name}</div>
+                <div class="item-sub">Given: ${fmt(map[name].given)} • Returned: ${fmt(map[name].returned)}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="stat-val ${pending > 0 ? 'text-blue' : 'text-green'}">${fmt(pending)}</div>
+                <button class="icon-btn" style="margin-top:4px;" onclick="openFriendEntryModal('${name}')">+ Update</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+      document.getElementById("friendsHistoryContainer").innerHTML = state.friends.map(f => `
+        <div class="list-item">
+          <div class="item-main">
+            <div class="item-title">${f.friend_name} — ${f.entry_type === 'given' ? 'Gave Money' : 'Received Back'}</div>
+            <div class="item-sub">${f.entry_date} ${f.note ? `• ${f.note}` : ""}</div>
+          </div>
+          <div class="stat-val ${f.entry_type === 'given' ? 'text-red' : 'text-green'}">
+            ${f.entry_type === 'given' ? '-' : '+'}${fmt(f.amount)}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // QUICK ENTRY FORM DYNAMIC OPTIONS
+    function updateFormFields() {
+      const type = document.getElementById("txType").value;
+      const catGroup = document.getElementById("categoryGroup");
+      const famGroup = document.getElementById("familyModeGroup");
+      const toGroup = document.getElementById("toAccountGroup");
+      const catSel = document.getElementById("txCategory");
+      const accSel = document.getElementById("txAccount");
+      const toSel = document.getElementById("txToAccount");
+
+      const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card").map(a => a.name);
+      const cards = state.accounts.filter(a => a.account_type === "credit_card").map(a => a.name);
+      const allAccs = [...banksAndCash, ...cards];
+
+      famGroup.style.display = type === "family_order" ? "block" : "none";
+      toGroup.style.display = (type === "cc_payment" || type === "transfer") ? "block" : "none";
+      catGroup.style.display = (type === "cc_payment" || type === "transfer") ? "none" : "block";
+
+      if (type === "expense") {
+        catSel.innerHTML = ["Petrol", "Outside Food / Chai", "Travel (Auto/Metro/Cab)", "Bills & Recharges", "Shopping / Personal", "Other Expense"].map(c => `<option>${c}</option>`).join("");
+        document.getElementById("accountLabel").textContent = "Paid Via (Bank / Cash / Credit Card)";
+        accSel.innerHTML = allAccs.map(a => `<option>${a}</option>`).join("");
+      } else if (type === "family_order") {
+        catSel.innerHTML = ["Family Groceries / Household", "Family Online Order", "Family Medicine / Bill", "Other Family Item"].map(c => `<option>${c}</option>`).join("");
+        document.getElementById("accountLabel").textContent = "Card / Account Used";
+        accSel.innerHTML = allAccs.map(a => `<option>${a}</option>`).join("");
+      } else if (type === "income") {
+        catSel.innerHTML = ["Monthly Salary (₹37,080)", "Tarun Retainer (Myntra/Snapdeal)", "Ankit Cash Pool (₹20,000)", "Website / Design Freelance", "Other Income"].map(c => `<option>${c}</option>`).join("");
+        document.getElementById("accountLabel").textContent = "Received Into";
+        accSel.innerHTML = banksAndCash.map(a => `<option>${a}</option>`).join("");
+      } else if (type === "papa_support") {
+        catSel.innerHTML = ["Papa Support (For EMI/Bills)", "Papa Cash Given", "Papa Online Transfer"].map(c => `<option>${c}</option>`).join("");
+        document.getElementById("accountLabel").textContent = "Received Into";
+        accSel.innerHTML = banksAndCash.map(a => `<option>${a}</option>`).join("");
+      } else if (type === "cc_payment") {
+        document.getElementById("accountLabel").textContent = "Pay From Bank";
+        accSel.innerHTML = banksAndCash.map(a => `<option>${a}</option>`).join("");
+        document.getElementById("toAccountLabel").textContent = "Select Credit Card";
+        toSel.innerHTML = cards.map(a => `<option>${a}</option>`).join("");
+      } else if (type === "transfer") {
+        document.getElementById("accountLabel").textContent = "From Account";
+        accSel.innerHTML = banksAndCash.map(a => `<option>${a}</option>`).join("");
+        document.getElementById("toAccountLabel").textContent = "To Account";
+        toSel.innerHTML = banksAndCash.map(a => `<option>${a}</option>`).join("");
+      }
+    }
+
+    function addChip(val) {
+      const el = document.getElementById("txAmount");
+      el.value = (Number(el.value || 0) + val);
+    }
+
+    // SUBMIT TRANSACTION & AUTO-UPDATE BALANCES
+    async function submitTransaction() {
+      const type = document.getElementById("txType").value;
+      const amount = Number(document.getElementById("txAmount").value);
+      const category = type === "cc_payment" ? "CC Bill Payment" : type === "transfer" ? "Self Transfer" : document.getElementById("txCategory").value;
+      const accountName = document.getElementById("txAccount").value;
+      const toAccountName = document.getElementById("txToAccount").value;
+      const familyMode = type === "family_order" ? document.getElementById("txFamilyMode").value : null;
+      const txDate = document.getElementById("txDate").value;
+      const note = document.getElementById("txNote").value.trim();
+
+      if (!amount || amount <= 0) return alert("Please enter a valid amount.");
+      const btn = document.getElementById("saveTxBtn");
+      btn.disabled = true; btn.textContent = "Saving...";
+
+      // Balance math
+      const acc = state.accounts.find(a => a.name === accountName);
+      if (type === "expense") {
+        if (acc.account_type === "credit_card") {
+          await sb.from("finance_accounts").update({ balance: Number(acc.balance) + amount }).eq("id", acc.id);
+        } else {
+          await sb.from("finance_accounts").update({ balance: Number(acc.balance) - amount }).eq("id", acc.id);
+        }
+      } else if (type === "family_order") {
+        if (familyMode !== "papa_cash") {
+          if (acc.account_type === "credit_card") {
+            await sb.from("finance_accounts").update({ balance: Number(acc.balance) + amount }).eq("id", acc.id);
+          } else {
+            await sb.from("finance_accounts").update({ balance: Number(acc.balance) - amount }).eq("id", acc.id);
+          }
+          if (familyMode === "card_plus_cash") {
+            const cashAcc = state.accounts.find(a => a.account_type === "cash");
+            if (cashAcc) await sb.from("finance_accounts").update({ balance: Number(cashAcc.balance) + amount }).eq("id", cashAcc.id);
+          }
+        }
+      } else if (type === "income" || type === "papa_support") {
+        await sb.from("finance_accounts").update({ balance: Number(acc.balance) + amount }).eq("id", acc.id);
+      } else if (type === "cc_payment") {
+        const card = state.accounts.find(a => a.name === toAccountName);
+        await sb.from("finance_accounts").update({ balance: Number(acc.balance) - amount }).eq("id", acc.id);
+        await sb.from("finance_accounts").update({
+          balance: Math.max(0, Number(card.balance) - amount),
+          last_paid_note: `Paid ${fmt(amount)} on ${txDate}`
+        }).eq("id", card.id);
+      } else if (type === "transfer") {
+        const toAcc = state.accounts.find(a => a.name === toAccountName);
+        await sb.from("finance_accounts").update({ balance: Number(acc.balance) - amount }).eq("id", acc.id);
+        await sb.from("finance_accounts").update({ balance: Number(toAcc.balance) + amount }).eq("id", toAcc.id);
+      }
+
+      await sb.from("finance_transactions").insert({
+        user_id: currentUser.id,
+        tx_type: type,
+        category,
+        amount,
+        account_name: toAccountName && (type === "cc_payment" || type === "transfer") ? `${accountName} → ${toAccountName}` : accountName,
+        family_mode: familyMode,
+        note,
+        tx_date: txDate
+      });
+
+      document.getElementById("txAmount").value = "";
+      document.getElementById("txNote").value = "";
+      btn.disabled = false; btn.textContent = "Save Entry to Cloud";
+      await loadAllData();
+      switchTab("home");
+    }
+
+    // MODALS FOR EMIs, CARDS, BALANCES, FRIENDS
+    function closeModal() { document.getElementById("actionModal").classList.remove("open"); }
+
+    function openPayRecurringModal(id) {
+      const r = state.recurring.find(x => x.id === id);
+      const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card");
+      document.getElementById("modalBody").innerHTML = `
+        <h3 style="margin-bottom:8px;">Confirm Payment: ${r.title}</h3>
+        <p style="font-size:0.84rem; color:var(--muted); margin-bottom:12px;">Amount: <strong>${fmt(r.amount)}</strong> (Due ${r.due_day}th)</p>
+        <div class="form-group">
+          <label>How was this paid?</label>
+          <select id="recPayMode">
+            ${banksAndCash.map(b => `<option value="${b.name}">Deduct from ${b.name} (${fmt(b.balance)})</option>`).join("")}
+            <option value="Papa Managed">Managed by Papa (Do not deduct my bank)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Payment Date</label>
+          <input type="date" id="recPayDate" value="${new Date().toISOString().split('T')[0]}" />
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-success" onclick="confirmPayRecurring('${r.id}')">Confirm & Tick</button>
+        </div>
+      `;
+      document.getElementById("actionModal").classList.add("open");
+    }
+
+    async function confirmPayRecurring(id) {
+      const r = state.recurring.find(x => x.id === id);
+      const mode = document.getElementById("recPayMode").value;
+      const payDate = document.getElementById("recPayDate").value;
+      const cycle = getTargetCycleMonth(r.due_day);
+
+      if (mode !== "Papa Managed") {
+        const acc = state.accounts.find(a => a.name === mode);
+        if (acc) {
+          await sb.from("finance_accounts").update({ balance: Number(acc.balance) - Number(r.amount) }).eq("id", acc.id);
+        }
+        await sb.from("finance_transactions").insert({
+          user_id: currentUser.id, tx_type: "expense", category: r.title, amount: r.amount, account_name: mode, note: "EMI/Interest Marked Paid", tx_date: payDate
+        });
+      }
+
+      await sb.from("finance_recurring").update({
+        last_paid_month: cycle, last_paid_date: payDate, paid_by_mode: mode
+      }).eq("id", id);
+
+      closeModal();
+      await loadAllData();
+    }
+
+    async function unmarkRecurring(id) {
+      await sb.from("finance_recurring").update({ last_paid_month: null, last_paid_date: null, paid_by_mode: null }).eq("id", id);
+      await loadAllData();
+    }
+
+    function openEditCardModal(id) {
+      const c = state.accounts.find(x => x.id === id);
+      document.getElementById("modalBody").innerHTML = `
+        <h3 style="margin-bottom:12px;">Update ${c.name}</h3>
+        <div class="form-group"><label>Billed Outstanding (₹)</label><input type="number" step="0.01" id="editCardOs" value="${c.balance}" /></div>
+        <div class="form-group"><label>Unbilled Amount (₹)</label><input type="number" step="0.01" id="editCardUnbilled" value="${c.unbilled_amount || 0}" /></div>
+        <div class="form-group"><label>Due Day of Month (1-31)</label><input type="number" id="editCardDue" value="${c.due_day}" /></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="saveCardEdit('${c.id}')">Save</button>
+        </div>
+      `;
+      document.getElementById("actionModal").classList.add("open");
+    }
+
+    async function saveCardEdit(id) {
+      await sb.from("finance_accounts").update({
+        balance: Number(document.getElementById("editCardOs").value),
+        unbilled_amount: Number(document.getElementById("editCardUnbilled").value),
+        due_day: Number(document.getElementById("editCardDue").value)
+      }).eq("id", id);
+      closeModal();
+      await loadAllData();
+    }
+
+    function openAdjustModal() {
+      const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card");
+      document.getElementById("modalBody").innerHTML = `
+        <h3 style="margin-bottom:12px;">Reconcile Bank & Cash Balances</h3>
+        ${banksAndCash.map(b => `
+          <div class="form-group">
+            <label>${b.name} (₹)</label>
+            <input type="number" step="0.01" id="bal_${b.id}" value="${b.balance}" />
+          </div>
+        `).join("")}
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="saveAllBalances()">Update All</button>
+        </div>
+      `;
+      document.getElementById("actionModal").classList.add("open");
+    }
+
+    async function saveAllBalances() {
+      const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card");
+      for (const b of banksAndCash) {
+        const val = Number(document.getElementById("bal_" + b.id).value);
+        await sb.from("finance_accounts").update({ balance: val }).eq("id", b.id);
+      }
+      closeModal();
+      await loadAllData();
+    }
+
+    function openAddRecurringModal() {
+      document.getElementById("modalBody").innerHTML = `
+        <h3 style="margin-bottom:12px;">Add Fixed EMI or Interest</h3>
+        <div class="form-group"><label>Title / Party Name</label><input type="text" id="newRecTitle" placeholder="e.g., New Loan EMI" /></div>
+        <div class="form-group"><label>Type</label><select id="newRecCat"><option value="emi">Fixed EMI</option><option value="interest">Borrow Interest</option></select></div>
+        <div class="form-group"><label>Amount (₹)</label><input type="number" id="newRecAmt" /></div>
+        <div class="form-group"><label>Due Date (Day 1-31)</label><input type="number" id="newRecDay" min="1" max="31" /></div>
+        <div class="form-group"><label>Note / Source</label><input type="text" id="newRecNote" placeholder="e.g., Kotak Bank auto-debit" /></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="saveNewRecurring()">Add Schedule</button>
+        </div>
+      `;
+      document.getElementById("actionModal").classList.add("open");
+    }
+
+    async function saveNewRecurring() {
+      await sb.from("finance_recurring").insert({
+        user_id: currentUser.id,
+        title: document.getElementById("newRecTitle").value.trim(),
+        category: document.getElementById("newRecCat").value,
+        amount: Number(document.getElementById("newRecAmt").value),
+        due_day: Number(document.getElementById("newRecDay").value),
+        source_note: document.getElementById("newRecNote").value.trim()
+      });
+      closeModal();
+      await loadAllData();
+    }
+
+    function openFriendEntryModal(prefillName = "") {
+      const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card");
+      document.getElementById("modalBody").innerHTML = `
+        <h3 style="margin-bottom:12px;">Friend Udhaar Entry</h3>
+        <div class="form-group"><label>Friend Name</label><input type="text" id="frName" value="${prefillName}" placeholder="e.g., Chakku, Gupta" /></div>
+        <div class="form-group"><label>Action</label>
+          <select id="frType">
+            <option value="given">I Gave Money (Receivable +)</option>
+            <option value="returned">Friend Returned Money (Receivable -)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Amount (₹)</label><input type="number" id="frAmt" /></div>
+        <div class="form-group"><label>Account Affected</label>
+          <select id="frAcc">
+            ${banksAndCash.map(b => `<option value="${b.name}">${b.name}</option>`).join("")}
+            <option value="No Balance Change">Record Only (Do not change bank/cash)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Date (Manual or Today)</label><input type="date" id="frDate" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div class="form-group"><label>Note</label><input type="text" id="frNote" placeholder="Optional reason" /></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button class="btn" onclick="saveFriendEntry()">Save</button>
+        </div>
+      `;
+      document.getElementById("actionModal").classList.add("open");
+    }
+
+    async function saveFriendEntry() {
+      const friend_name = document.getElementById("frName").value.trim();
+      const entry_type = document.getElementById("frType").value;
+      const amount = Number(document.getElementById("frAmt").value);
+      const account_name = document.getElementById("frAcc").value;
+      const entry_date = document.getElementById("frDate").value;
+      const note = document.getElementById("frNote").value.trim();
+      if (!friend_name || !amount) return alert("Enter name and amount.");
+
+      if (account_name !== "No Balance Change") {
+        const acc = state.accounts.find(a => a.name === account_name);
+        if (acc) {
+          const newBal = entry_type === "given" ? Number(acc.balance) - amount : Number(acc.balance) + amount;
+          await sb.from("finance_accounts").update({ balance: newBal }).eq("id", acc.id);
+        }
+      }
+
+      await sb.from("finance_friends").insert({
+        user_id: currentUser.id, friend_name, entry_type, amount, account_name, note, entry_date
+      });
+      closeModal();
+      await loadAllData();
+    }
+
+    // NAVIGATION
+    function switchTab(tab) {
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("view-" + tab).classList.add("active");
+      document.getElementById("nav-" + tab).classList.add("active");
+    }
+
+    initAuth();
+  </script>
+</body>
+</html>
