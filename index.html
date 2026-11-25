@@ -1249,7 +1249,19 @@
     async function deleteFriendEntry(id) {
       const f = state.friends.find(x => x.id === id);
       if (!f) return;
-      if (!confirm(`Delete ${f.friend_name}'s entry of ${fmt(f.amount)}?`)) return;
+      if (!confirm(`Delete ${f.friend_name}'s entry of ${fmt(f.amount)} and revert account balance?`)) return;
+
+      // Revert bank/cash balance if an account was affected
+      if (f.account_name && f.account_name !== "No Balance Change" && f.account_name !== "Opening Balance") {
+        const acc = state.accounts.find(a => a.name === f.account_name);
+        if (acc) {
+          const revertedBal = f.entry_type === "given"
+            ? Number(acc.balance) + Number(f.amount)
+            : Number(acc.balance) - Number(f.amount);
+          await sb.from("finance_accounts").update({ balance: revertedBal }).eq("id", acc.id);
+        }
+      }
+
       await sb.from("finance_friends").delete().eq("id", id);
       await loadAllData();
     }
@@ -1648,7 +1660,7 @@
     }
 
     // AUTO-UPDATE ENGINE FOR iPHONE HOME SCREEN APP
-    const APP_VERSION = "1.5.2";
+    const APP_VERSION = "1.5.3";
 
     async function checkForAppUpdate(manual = false) {
       const btn = document.getElementById("syncBtn");
