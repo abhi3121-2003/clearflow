@@ -101,6 +101,11 @@
       cursor: pointer;
       white-space: nowrap;
     }
+    .icon-btn.active-filter {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
     .del-btn {
       background: var(--danger-soft);
       border: none;
@@ -202,21 +207,22 @@
     .list-item:last-child { border-bottom: none; padding-bottom: 0; }
     .item-main { flex: 1; min-width: 0; }
     .item-title { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; word-break: break-word; }
+    .item-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; word-break: break-word; line-height: 1.35; }
     .badge {
       display: inline-block;
-      padding: 2px 7px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.66rem;
+      font-weight: 800;
       white-space: nowrap;
+      letter-spacing: 0.3px;
     }
     .badge-red { background: var(--danger-soft); color: var(--danger); }
     .badge-amber { background: var(--warning-soft); color: var(--warning); }
     .badge-green { background: var(--success-soft); color: var(--success); }
     .badge-blue { background: var(--primary-soft); color: var(--primary); }
 
-    /* Forms — Strict Cross-Browser & iOS Safari Alignment */
+    /* Forms */
     .form-group { margin-bottom: 11px; min-width: 0; width: 100%; }
     label {
       display: block;
@@ -423,11 +429,27 @@
         <!-- RECENT TRANSACTIONS WITH MONTH FILTER -->
         <div class="card">
           <div class="card-title">
-            <span>Activity Log</span>
+            <span>Transactions</span>
             <select id="monthFilter" onchange="renderDashboard()" style="width:auto; height:30px; padding:0 26px 0 8px; font-size:0.74rem;"></select>
           </div>
           <div id="monthSummaryStrip" style="font-size:0.76rem; color:var(--muted); margin-bottom:8px;"></div>
           <div id="recentTxContainer"></div>
+        </div>
+
+        <!-- TAMPER-PROOF 30-DAY ACTIVITY & AUDIT LOG (CANNOT BE DELETED) -->
+        <div class="card">
+          <div class="card-title">
+            <span>Activity Log (Last 30 Days • Locked)</span>
+            <span class="badge badge-blue">NO DELETE</span>
+          </div>
+          <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;" id="auditFilterRow">
+            <button class="icon-btn active-filter" onclick="setAuditFilter('ALL', this)">All</button>
+            <button class="icon-btn" onclick="setAuditFilter('CREATED', this)">Created</button>
+            <button class="icon-btn" onclick="setAuditFilter('EDITED', this)">Edited</button>
+            <button class="icon-btn" onclick="setAuditFilter('DELETED', this)">Deleted</button>
+            <button class="icon-btn" onclick="setAuditFilter('PAID', this)">Paid</button>
+          </div>
+          <div id="auditLogContainer"></div>
         </div>
       </div>
 
@@ -620,7 +642,8 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
-    let state = { accounts: [], recurring: [], transactions: [], friends: [], fuel: [] };
+    let state = { accounts: [], recurring: [], transactions: [], friends: [], fuel: [], auditLogs: [] };
+    let currentAuditFilter = "ALL";
 
     // THEME ENGINE
     let themeMode = localStorage.getItem("clearflow_theme") || "auto";
@@ -642,6 +665,22 @@
     }
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (themeMode === "auto") applyTheme(); });
     applyTheme();
+
+    // AUDIT LOG RECORDER (EVERY CREATE, EDIT, DELETE, PAYMENT)
+    async function recordAuditLog(action_type, module, summary, amount = null) {
+      if (!currentUser) return;
+      try {
+        await sb.from("finance_audit_logs").insert({
+          user_id: currentUser.id,
+          action_type,
+          module,
+          summary,
+          amount
+        });
+      } catch (e) {
+        console.warn("Audit log error:", e);
+      }
+    }
 
     // AUTH INITIALIZATION
     async function initAuth() {
@@ -688,14 +727,17 @@
       updateFormFields();
     }
 
-    // LOAD DATA FROM SUPABASE
+    // LOAD DATA FROM SUPABASE (INCLUDING LAST 30 DAYS AUDIT LOGS)
     async function loadAllData() {
-      const [accRes, recRes, txRes, frRes, fuelRes] = await Promise.all([
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      const [accRes, recRes, txRes, frRes, fuelRes, auditRes] = await Promise.all([
         sb.from("finance_accounts").select("*").order("name"),
         sb.from("finance_recurring").select("*").order("due_day"),
         sb.from("finance_transactions").select("*").order("tx_date", { ascending: false }).order("created_at", { ascending: false }).limit(100),
         sb.from("finance_friends").select("*").order("entry_date", { ascending: false }),
-        sb.from("finance_fuel").select("*").order("fill_date", { ascending: false }).order("created_at", { ascending: false })
+        sb.from("finance_fuel").select("*").order("fill_date", { ascending: false }).order("created_at", { ascending: false }),
+        sb.from("finance_audit_logs").select("*").gte("created_at", thirtyDaysAgo).order("created_at", { ascending: false })
       ]);
 
       state.accounts = accRes.data || [];
@@ -703,10 +745,12 @@
       state.transactions = txRes.data || [];
       state.friends = frRes.data || [];
       state.fuel = fuelRes.data || [];
+      state.auditLogs = auditRes.data || [];
 
       populateMonthFilter();
       document.getElementById("seedBanner").style.display = state.accounts.length === 0 ? "block" : "none";
       renderDashboard();
+      renderAuditLogs();
       renderFuel();
       renderCards();
       renderRecurring();
@@ -779,11 +823,21 @@
         return;
       }
 
+      await recordAuditLog("CREATED", "System", "Initial financial accounts, EMIs & ledgers loaded", null);
       await loadAllData();
     }
 
-    // HELPER: FORMAT CURRENCY
+    // HELPER: FORMAT CURRENCY & TIMESTAMPS
     const fmt = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    function fmtTimestamp(isoStr) {
+      if (!isoStr) return "";
+      const d = new Date(isoStr);
+      return d.toLocaleString("en-IN", {
+        day: "2-digit", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit", hour12: true
+      });
+    }
 
     function getDaysUntil(dueDay) {
       const today = new Date();
@@ -802,6 +856,46 @@
         target = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
       }
       return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    // RENDER TAMPER-PROOF ACTIVITY & AUDIT LOG (LAST 30 DAYS)
+    function setAuditFilter(filterType, btnEl) {
+      currentAuditFilter = filterType;
+      document.querySelectorAll("#auditFilterRow .icon-btn").forEach(b => b.classList.remove("active-filter"));
+      if (btnEl) btnEl.classList.add("active-filter");
+      renderAuditLogs();
+    }
+
+    function renderAuditLogs() {
+      const logs = currentAuditFilter === "ALL"
+        ? state.auditLogs
+        : state.auditLogs.filter(l => l.action_type === currentAuditFilter);
+
+      document.getElementById("auditLogContainer").innerHTML = logs.length === 0
+        ? `<p style="font-size:0.82rem; color:var(--muted);">No activity logs in this filter for the last 30 days.</p>`
+        : logs.map(l => {
+          const badgeMap = {
+            CREATED: "badge-green",
+            EDITED: "badge-blue",
+            DELETED: "badge-red",
+            PAID: "badge-green",
+            RECONCILED: "badge-amber"
+          };
+          const bClass = badgeMap[l.action_type] || "badge-blue";
+          return `
+            <div class="list-item" style="align-items:flex-start;">
+              <div class="item-main">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px;">
+                  <span class="badge ${bClass}">${l.action_type}</span>
+                  <span style="font-size:0.74rem; font-weight:700; color:var(--text);">${l.module}</span>
+                  <span style="font-size:0.7rem; color:var(--muted);">• ${fmtTimestamp(l.created_at)}</span>
+                </div>
+                <div class="item-sub" style="color:var(--text); opacity:0.9;">${l.summary}</div>
+              </div>
+              ${l.amount !== null && l.amount !== undefined ? `<div class="stat-val" style="font-size:0.86rem; flex-shrink:0;">${fmt(l.amount)}</div>` : ""}
+            </div>
+          `;
+        }).join("");
     }
 
     // RENDER DASHBOARD & SMART COACH
@@ -951,7 +1045,7 @@
         }).join("");
     }
 
-    // DELETE & REVERT TRANSACTION
+    // DELETE & REVERT TRANSACTION + LOG TO AUDIT
     async function deleteTransaction(id) {
       const t = state.transactions.find(x => x.id === id);
       if (!t) return;
@@ -975,6 +1069,12 @@
       }
 
       await sb.from("finance_transactions").delete().eq("id", id);
+      await recordAuditLog(
+        "DELETED",
+        "Transaction",
+        `Deleted "${t.category}" (Entry Date: ${t.tx_date} • Account: ${t.account_name}${t.note ? ` • Note: ${t.note}` : ''}) — Balance reverted`,
+        t.amount
+      );
       await loadAllData();
     }
 
@@ -1066,6 +1166,7 @@
       await sb.from("finance_fuel").insert({
         user_id: currentUser.id, fill_date: "2026-11-25", price_per_l: 107.47, amount: 333, filled_l: 3.10, km_range: 118.9, mileage: 38.35, account_name: "Cash in Hand"
       });
+      await recordAuditLog("CREATED", "Petrol", "Imported 25 Nov Jupiter fill (3.10L • 118.9km • 38.35 km/l)", 333);
       await loadAllData();
     }
 
@@ -1113,6 +1214,13 @@
         tx_date: fill_date
       });
 
+      await recordAuditLog(
+        "CREATED",
+        "Petrol",
+        `Added Jupiter fill (${fill_date}): ${filled_l}L @ ₹${price_per_l}/L • ${km_range}km (${mileage} km/l) via ${account_name}`,
+        amount
+      );
+
       document.getElementById("fuelAmount").value = "";
       document.getElementById("fuelKm").value = "";
       document.getElementById("fuelLivePreview").style.display = "none";
@@ -1131,6 +1239,12 @@
         await sb.from("finance_accounts").update({ balance: revertedBal }).eq("id", acc.id);
       }
       await sb.from("finance_fuel").delete().eq("id", id);
+      await recordAuditLog(
+        "DELETED",
+        "Petrol",
+        `Deleted Jupiter fill (${f.fill_date}: ${f.filled_l}L • ${f.km_range}km) — Reverted ${f.account_name}`,
+        f.amount
+      );
       await loadAllData();
     }
 
@@ -1251,7 +1365,6 @@
       if (!f) return;
       if (!confirm(`Delete ${f.friend_name}'s entry of ${fmt(f.amount)} and revert account balance?`)) return;
 
-      // Revert bank/cash balance if an account was affected
       if (f.account_name && f.account_name !== "No Balance Change" && f.account_name !== "Opening Balance") {
         const acc = state.accounts.find(a => a.name === f.account_name);
         if (acc) {
@@ -1263,6 +1376,12 @@
       }
 
       await sb.from("finance_friends").delete().eq("id", id);
+      await recordAuditLog(
+        "DELETED",
+        "Friend Udhaar",
+        `Deleted ${f.friend_name}'s "${f.entry_type}" entry (${f.entry_date} • Account: ${f.account_name}) — Balance reverted`,
+        f.amount
+      );
       await loadAllData();
     }
 
@@ -1347,6 +1466,14 @@
       await sb.from("finance_friends").insert({
         user_id: currentUser.id, friend_name, phone: phone || null, entry_type, amount, account_name, note, entry_date
       });
+
+      await recordAuditLog(
+        "CREATED",
+        "Friend Udhaar",
+        `${friend_name}: ${entry_type === 'given' ? 'Gave money' : 'Received back'} (${entry_date} • Account: ${account_name}${note ? ` • ${note}` : ''})`,
+        amount
+      );
+
       closeModal();
       await loadAllData();
     }
@@ -1459,16 +1586,25 @@
         await sb.from("finance_accounts").update({ balance: Number(toAcc.balance) + amount }).eq("id", toAcc.id);
       }
 
+      const displayAcc = toAccountName && (type === "cc_payment" || type === "transfer") ? `${accountName} → ${toAccountName}` : accountName;
+
       await sb.from("finance_transactions").insert({
         user_id: currentUser.id,
         tx_type: type,
         category,
         amount,
-        account_name: toAccountName && (type === "cc_payment" || type === "transfer") ? `${accountName} → ${toAccountName}` : accountName,
+        account_name: displayAcc,
         family_mode: familyMode,
         note,
         tx_date: txDate
       });
+
+      await recordAuditLog(
+        "CREATED",
+        "Transaction",
+        `Added "${category}" (${txDate} • ${displayAcc}${note ? ` • Note: ${note}` : ''})`,
+        amount
+      );
 
       document.getElementById("txAmount").value = "";
       document.getElementById("txNote").value = "";
@@ -1525,12 +1661,23 @@
         last_paid_month: cycle, last_paid_date: payDate, paid_by_mode: mode
       }).eq("id", id);
 
+      await recordAuditLog(
+        "PAID",
+        "EMI / Interest",
+        `Marked "${r.title}" paid on ${payDate} (${mode})`,
+        r.amount
+      );
+
       closeModal();
       await loadAllData();
     }
 
     async function unmarkRecurring(id) {
+      const r = state.recurring.find(x => x.id === id);
       await sb.from("finance_recurring").update({ last_paid_month: null, last_paid_date: null, paid_by_mode: null }).eq("id", id);
+      if (r) {
+        await recordAuditLog("EDITED", "EMI / Interest", `Unmarked "${r.title}" back to unpaid`, r.amount);
+      }
       await loadAllData();
     }
 
@@ -1552,19 +1699,30 @@
     }
 
     async function saveRecurringEdit(id) {
-      await sb.from("finance_recurring").update({
-        title: document.getElementById("edRecTitle").value.trim(),
-        amount: Number(document.getElementById("edRecAmt").value),
-        due_day: Number(document.getElementById("edRecDay").value),
-        source_note: document.getElementById("edRecNote").value.trim()
-      }).eq("id", id);
+      const oldR = state.recurring.find(x => x.id === id);
+      const title = document.getElementById("edRecTitle").value.trim();
+      const amount = Number(document.getElementById("edRecAmt").value);
+      const due_day = Number(document.getElementById("edRecDay").value);
+      const source_note = document.getElementById("edRecNote").value.trim();
+
+      await sb.from("finance_recurring").update({ title, amount, due_day, source_note }).eq("id", id);
+      await recordAuditLog(
+        "EDITED",
+        "EMI / Interest",
+        `Updated "${title}" (${fmt(oldR.amount)} → ${fmt(amount)}, Due: ${oldR.due_day}th → ${due_day}th)`,
+        amount
+      );
       closeModal();
       await loadAllData();
     }
 
     async function deleteRecurring(id) {
+      const r = state.recurring.find(x => x.id === id);
       if (!confirm("Delete this recurring EMI/Interest permanently?")) return;
       await sb.from("finance_recurring").delete().eq("id", id);
+      if (r) {
+        await recordAuditLog("DELETED", "EMI / Interest", `Deleted schedule "${r.title}" (Due ${r.due_day}th)`, r.amount);
+      }
       closeModal();
       await loadAllData();
     }
@@ -1585,11 +1743,23 @@
     }
 
     async function saveCardEdit(id) {
+      const oldC = state.accounts.find(x => x.id === id);
+      const newBal = Number(document.getElementById("editCardOs").value);
+      const newUnbilled = Number(document.getElementById("editCardUnbilled").value);
+      const newDue = Number(document.getElementById("editCardDue").value);
+
       await sb.from("finance_accounts").update({
-        balance: Number(document.getElementById("editCardOs").value),
-        unbilled_amount: Number(document.getElementById("editCardUnbilled").value),
-        due_day: Number(document.getElementById("editCardDue").value)
+        balance: newBal,
+        unbilled_amount: newUnbilled,
+        due_day: newDue
       }).eq("id", id);
+
+      await recordAuditLog(
+        "EDITED",
+        "Credit Card",
+        `${oldC.name}: Billed O/S ${fmt(oldC.balance)} → ${fmt(newBal)} | Unbilled ${fmt(oldC.unbilled_amount || 0)} → ${fmt(newUnbilled)} | Due ${newDue}th`,
+        newBal
+      );
       closeModal();
       await loadAllData();
     }
@@ -1614,9 +1784,16 @@
 
     async function saveAllBalances() {
       const banksAndCash = state.accounts.filter(a => a.account_type !== "credit_card");
+      const changes = [];
       for (const b of banksAndCash) {
         const val = Number(document.getElementById("bal_" + b.id).value);
-        await sb.from("finance_accounts").update({ balance: val }).eq("id", b.id);
+        if (val !== Number(b.balance)) {
+          changes.push(`${b.name}: ${fmt(b.balance)} → ${fmt(val)}`);
+          await sb.from("finance_accounts").update({ balance: val }).eq("id", b.id);
+        }
+      }
+      if (changes.length > 0) {
+        await recordAuditLog("RECONCILED", "Bank / Cash", `Updated balances: ${changes.join(" | ")}`, null);
       }
       closeModal();
       await loadAllData();
@@ -1639,14 +1816,16 @@
     }
 
     async function saveNewRecurring() {
+      const title = document.getElementById("newRecTitle").value.trim();
+      const category = document.getElementById("newRecCat").value;
+      const amount = Number(document.getElementById("newRecAmt").value);
+      const due_day = Number(document.getElementById("newRecDay").value);
+      const source_note = document.getElementById("newRecNote").value.trim();
+
       await sb.from("finance_recurring").insert({
-        user_id: currentUser.id,
-        title: document.getElementById("newRecTitle").value.trim(),
-        category: document.getElementById("newRecCat").value,
-        amount: Number(document.getElementById("newRecAmt").value),
-        due_day: Number(document.getElementById("newRecDay").value),
-        source_note: document.getElementById("newRecNote").value.trim()
+        user_id: currentUser.id, title, category, amount, due_day, source_note
       });
+      await recordAuditLog("CREATED", "EMI / Interest", `Added "${title}" (Due ${due_day}th of month)`, amount);
       closeModal();
       await loadAllData();
     }
@@ -1660,7 +1839,7 @@
     }
 
     // AUTO-UPDATE ENGINE FOR iPHONE HOME SCREEN APP
-    const APP_VERSION = "1.5.3";
+    const APP_VERSION = "1.6.0";
 
     async function checkForAppUpdate(manual = false) {
       const btn = document.getElementById("syncBtn");
