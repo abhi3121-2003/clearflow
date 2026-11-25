@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -44,42 +44,126 @@
       --shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 85px; transition: background 0.25s, color 0.25s; overflow-x: hidden; }
-    
-    /* Header */
-    .topbar {
-      position: sticky; top: 0; z-index: 50;
-      background: var(--card); border-bottom: 1px solid var(--border);
-      padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
-    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.3px; }
-    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
-    .top-actions { display: flex; gap: 6px; align-items: center; }
+
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.25s, color 0.25s;
+    }
+
+    body {
+      padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    }
+    
+    /* Header with iOS Safe Area */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 800;
+      font-size: clamp(1.05rem, 4vw, 1.2rem);
+      letter-spacing: -0.3px;
+      white-space: nowrap;
+    }
+    .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+    .top-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
     .icon-btn {
-      background: var(--bg); border: 1px solid var(--border); color: var(--text);
-      padding: 6px 9px; border-radius: 10px; font-size: 0.76rem; font-weight: 600; cursor: pointer;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 9px;
+      border-radius: 9px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
     }
     .del-btn {
-      background: var(--danger-soft); border: none; color: var(--danger);
-      width: 24px; height: 24px; border-radius: 7px; font-size: 0.85rem; font-weight: 800; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center; margin-left: 6px;
+      background: var(--danger-soft);
+      border: none;
+      color: var(--danger);
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      flex-shrink: 0;
     }
 
     /* Container */
-    .container { max-width: 680px; margin: 0 auto; padding: 14px; }
-
-    /* Cards & Grids */
-    .card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-      padding: 15px; margin-bottom: 14px; box-shadow: var(--shadow);
+    .container {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 12px;
     }
-    .card-title { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .stat-box { background: var(--bg); padding: 11px; border-radius: 12px; border: 1px solid var(--border); }
-    .stat-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
-    .stat-val { font-size: 1.05rem; font-weight: 800; }
+
+    /* Cards & Responsive Grids */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      width: 100%;
+      min-width: 0;
+    }
+    .card-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      width: 100%;
+    }
+    .stat-box {
+      background: var(--bg);
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      min-width: 0;
+    }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-val { font-size: clamp(0.98rem, 3.8vw, 1.12rem); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .text-green { color: var(--success); }
     .text-red { color: var(--danger); }
     .text-amber { color: var(--warning); }
@@ -87,9 +171,18 @@
 
     /* Alerts & Coach */
     .alert-banner {
-      padding: 11px 13px; border-radius: 12px; font-size: 0.84rem; line-height: 1.4;
-      margin-bottom: 10px; border-left: 4px solid; display: flex; flex-direction: column; gap: 3px;
+      padding: 10px 12px;
+      border-radius: 11px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      border-left: 4px solid;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      word-break: break-word;
     }
+    .alert-banner:last-child { margin-bottom: 0; }
     .alert-danger { background: var(--danger-soft); border-color: var(--danger); }
     .alert-warning { background: var(--warning-soft); border-color: var(--warning); }
     .alert-info { background: var(--primary-soft); border-color: var(--primary); }
@@ -97,65 +190,152 @@
 
     /* Lists */
     .list-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 11px 0; border-bottom: 1px solid var(--border); gap: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+      min-width: 0;
     }
     .list-item:last-child { border-bottom: none; padding-bottom: 0; }
     .item-main { flex: 1; min-width: 0; }
-    .item-title { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .item-title { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; word-break: break-word; }
     .badge {
-      display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      white-space: nowrap;
     }
     .badge-red { background: var(--danger-soft); color: var(--danger); }
     .badge-amber { background: var(--warning-soft); color: var(--warning); }
     .badge-green { background: var(--success-soft); color: var(--success); }
     .badge-blue { background: var(--primary-soft); color: var(--primary); }
 
-    /* Forms */
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
-    select, input {
-      width: 100%; padding: 11px 12px; border-radius: 11px; border: 1px solid var(--border);
-      background: var(--bg); color: var(--text); font-size: 0.95rem; outline: none;
+    /* Forms — Strict Cross-Browser & iOS Safari Alignment */
+    .form-group { margin-bottom: 11px; min-width: 0; width: 100%; }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    select, input[type="text"], input[type="number"], input[type="email"], input[type="password"], input[type="tel"], input[type="date"] {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      height: 42px;
+      padding: 0 12px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.92rem;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 15px;
+      padding-right: 30px;
+    }
+    input[type="date"] {
+      text-align: left;
+      line-height: 40px;
     }
     select:focus, input:focus { border-color: var(--primary); }
+
     .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
     .chip {
-      background: var(--bg); border: 1px solid var(--border); color: var(--text);
-      padding: 5px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
     }
     .btn {
-      width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 0.95rem;
-      font-weight: 700; cursor: pointer; background: var(--primary); color: #fff;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
     }
-    .btn-sm { padding: 6px 10px; font-size: 0.75rem; border-radius: 8px; width: auto; }
+    .btn-sm { padding: 6px 10px; font-size: 0.74rem; border-radius: 8px; width: auto; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-success { background: var(--success); color: #fff; }
 
-    /* Bottom Navigation */
+    /* Bottom Navigation with iOS Safe Area */
     .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-      background: var(--card); border-top: 1px solid var(--border);
-      display: grid; grid-template-columns: repeat(6, 1fr); padding: 6px 2px 12px;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      padding: 6px 2px calc(8px + env(safe-area-inset-bottom));
     }
     .nav-btn {
-      background: none; border: none; color: var(--muted); font-size: 0.68rem; font-weight: 600;
-      display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.66rem;
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      min-width: 0;
     }
     .nav-btn.active { color: var(--primary); font-weight: 800; }
-    .nav-icon { font-size: 1.15rem; }
+    .nav-icon { font-size: 1.15rem; line-height: 1; }
 
     /* Views & Modal */
-    .view { display: none; }
+    .view { display: none; width: 100%; }
     .view.active { display: block; }
-    .login-box { max-width: 400px; margin: 60px auto; padding: 20px; }
+    .login-box { max-width: 400px; margin: 50px auto; padding: 16px; }
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100;
-      display: none; align-items: center; justify-content: center; padding: 16px;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
     }
     .modal-backdrop.open { display: flex; }
-    .modal-card { background: var(--card); border-radius: 16px; padding: 18px; width: 100%; max-width: 440px; border: 1px solid var(--border); max-height: 85vh; overflow-y: auto; }
+    .modal-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid var(--border);
+      max-height: 85vh;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
@@ -163,8 +343,8 @@
   <!-- LOGIN SCREEN -->
   <div id="authScreen" class="login-box" style="display:none;">
     <div class="card">
-      <div class="brand" style="margin-bottom:6px; font-size:1.4rem;"><span class="brand-dot"></span> ClearFlow</div>
-      <p style="font-size:0.84rem; color:var(--muted); margin-bottom:18px;">Private Cloud Cash-Flow & Debt Control</p>
+      <div class="brand" style="margin-bottom:6px; font-size:1.35rem;"><span class="brand-dot"></span> ClearFlow</div>
+      <p style="font-size:0.84rem; color:var(--muted); margin-bottom:16px;">Private Cloud Cash-Flow & Debt Control</p>
       <div class="form-group">
         <label>Email Address</label>
         <input type="email" id="loginEmail" placeholder="Enter your email" />
@@ -243,9 +423,9 @@
         <div class="card">
           <div class="card-title">
             <span>Activity Log</span>
-            <select id="monthFilter" onchange="renderDashboard()" style="width:auto; padding:4px 8px; font-size:0.75rem;"></select>
+            <select id="monthFilter" onchange="renderDashboard()" style="width:auto; height:30px; padding:0 26px 0 8px; font-size:0.74rem;"></select>
           </div>
-          <div id="monthSummaryStrip" style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;"></div>
+          <div id="monthSummaryStrip" style="font-size:0.76rem; color:var(--muted); margin-bottom:8px;"></div>
           <div id="recentTxContainer"></div>
         </div>
       </div>
@@ -320,26 +500,30 @@
       <!-- TAB 3: JUPITER FUEL & MILEAGE -->
       <div id="view-fuel" class="view">
         <div class="card">
-          <div class="card-title"><span>Jupiter Mileage & Running Cost</span><span id="fuelPriceBadge" class="badge badge-blue">₹107.47/L</span></div>
-          <div class="grid-3">
+          <div class="card-title"><span>Jupiter Mileage & Cost</span><span id="fuelPriceBadge" class="badge badge-blue">₹107.47/L</span></div>
+          <div class="grid-2">
             <div class="stat-box">
               <div class="stat-label">Overall Avg</div>
               <div class="stat-val text-green" id="overallAvgMileage">—</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">Last Fill</div>
+              <div class="stat-label">Last Fill Avg</div>
               <div class="stat-val text-blue" id="lastFillMileage">—</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">Cost / KM</div>
+              <div class="stat-label">Running Cost</div>
               <div class="stat-val text-amber" id="fuelCostPerKm">—</div>
             </div>
+            <div class="stat-box">
+              <div class="stat-label">Total Logged Fuel</div>
+              <div class="stat-val" id="totalFuelSpendVal">₹0</div>
+            </div>
           </div>
-          <div id="lastFuelRefBanner" style="font-size:0.76rem; color:var(--muted); margin-top:10px;"></div>
+          <div id="lastFuelRefBanner" style="font-size:0.75rem; color:var(--muted); margin-top:10px; line-height:1.4;"></div>
         </div>
 
         <div class="card">
-          <div class="card-title"><span>Log Petrol Fill (Auto-Deducts Expense)</span></div>
+          <div class="card-title"><span>Log Petrol Fill</span></div>
           <div class="grid-2">
             <div class="form-group">
               <label>Amount Paid (₹)</label>
@@ -356,7 +540,7 @@
               <input type="number" step="0.01" id="fuelPrice" value="107.47" oninput="calcFuelPreview()" />
             </div>
             <div class="form-group">
-              <label>Paid Via (Sticky Mode)</label>
+              <label>Paid Via (Sticky)</label>
               <select id="fuelAccount" onchange="saveStickyFuelAccount()"></select>
             </div>
           </div>
@@ -369,7 +553,7 @@
         </div>
 
         <div class="card">
-          <div class="card-title"><span>Jupiter Fill History</span><span id="totalFuelSpendLabel"></span></div>
+          <div class="card-title"><span>Jupiter Fill History</span></div>
           <div id="fuelHistoryContainer"></div>
         </div>
       </div>
@@ -389,7 +573,7 @@
             <span>Fixed EMIs & 10th Interests</span>
             <button class="icon-btn" onclick="openAddRecurringModal()">+ Add New</button>
           </div>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">
+          <p style="font-size:0.76rem; color:var(--muted); margin-bottom:10px;">
             Tick when paid (even in advance) — auto-records exact payment date and clears reminders for this month.
           </p>
           <div id="allRecurringContainer"></div>
@@ -745,7 +929,7 @@
         else if (t.tx_type === "family_order") mFamilyOut += Number(t.amount);
       });
 
-      document.getElementById("monthSummaryStrip").innerHTML = `Inflow: <b class="text-green">${fmt(mIn)}</b> • Personal Spend: <b class="text-red">${fmt(mPersonalOut)}</b> • Family: <b>${fmt(mFamilyOut)}</b>`;
+      document.getElementById("monthSummaryStrip").innerHTML = `Inflow: <b class="text-green">${fmt(mIn)}</b> • Personal: <b class="text-red">${fmt(mPersonalOut)}</b> • Family: <b>${fmt(mFamilyOut)}</b>`;
 
       document.getElementById("recentTxContainer").innerHTML = filteredTxs.length === 0
         ? `<p style="font-size:0.84rem; color:var(--muted);">No transactions logged for this period.</p>`
@@ -757,7 +941,7 @@
                 <div class="item-title">${t.category} ${t.note ? `— ${t.note}` : ""}</div>
                 <div class="item-sub">${t.tx_date} • ${t.account_name || ""}</div>
               </div>
-              <div style="display:flex; align-items:center;">
+              <div style="display:flex; align-items:center; flex-shrink:0;">
                 <div class="stat-val ${isPositive ? 'text-green' : ''}">${isPositive ? '+' : '-'}${fmt(t.amount)}</div>
                 <button class="del-btn" title="Delete & Revert Balance" onclick="deleteTransaction('${t.id}')">×</button>
               </div>
@@ -772,8 +956,7 @@
       if (!t) return;
       if (!confirm(`Delete "${t.category}" (${fmt(t.amount)}) and revert account balance?`)) return;
 
-      // Revert balance if single account
-      if (!t.account_name.includes("→")) {
+      if (t.account_name && !t.account_name.includes("→")) {
         const acc = state.accounts.find(a => a.name === t.account_name);
         if (acc) {
           let revertedBal = Number(acc.balance);
@@ -820,7 +1003,7 @@
       const fuelAccSel = document.getElementById("fuelAccount");
       if (fuelAccSel) {
         fuelAccSel.innerHTML = state.accounts.map(a => `<option value="${a.name}">${a.name}</option>`).join("");
-        const stickyAcc = localStorage.getItem("clearflow_sticky_fuel_acc") || (state.fuel[0]?.account_name);
+        const stickyAcc = localStorage.getItem("clearflow_sticky_fuel_acc") || (state.fuel[0]?.account_name) || "Cash in Hand";
         if (stickyAcc && Array.from(fuelAccSel.options).some(o => o.value === stickyAcc)) {
           fuelAccSel.value = stickyAcc;
         }
@@ -832,8 +1015,15 @@
       document.getElementById("fuelPriceBadge").textContent = `₹${savedPrice}/L`;
 
       if (state.fuel.length === 0) {
+        document.getElementById("overallAvgMileage").textContent = "—";
+        document.getElementById("lastFillMileage").textContent = "—";
+        document.getElementById("fuelCostPerKm").textContent = "—";
+        document.getElementById("totalFuelSpendVal").textContent = "₹0";
         document.getElementById("lastFuelRefBanner").textContent = "Last Excel Record: 20 Nov 2026 • 147.2 km (47 km/l)";
-        document.getElementById("fuelHistoryContainer").innerHTML = `<p style="font-size:0.84rem; color:var(--muted);">No petrol fills logged in cloud yet.</p>`;
+        document.getElementById("fuelHistoryContainer").innerHTML = `
+          <p style="font-size:0.84rem; color:var(--muted); margin-bottom:10px;">No petrol fills found in cloud yet.</p>
+          <button class="btn btn-sm btn-outline" onclick="quickImportNov25Fuel()">+ Import 25 Nov Entry (₹333 • 118.9 km)</button>
+        `;
         return;
       }
 
@@ -847,7 +1037,7 @@
       document.getElementById("overallAvgMileage").textContent = `${overallAvg} km/l`;
       document.getElementById("lastFillMileage").textContent = `${Number(latest.mileage).toFixed(1)} km/l`;
       document.getElementById("fuelCostPerKm").textContent = `₹${costPerKm}/km`;
-      document.getElementById("totalFuelSpendLabel").textContent = `Total: ${fmt(totalSpend)}`;
+      document.getElementById("totalFuelSpendVal").textContent = fmt(totalSpend);
       document.getElementById("lastFuelRefBanner").innerHTML = `Last Fill: <b>${latest.fill_date}</b> • ${latest.km_range} km • ${latest.filled_l} L (${Number(latest.mileage).toFixed(1)} km/l)`;
 
       document.getElementById("fuelHistoryContainer").innerHTML = state.fuel.map(f => {
@@ -859,9 +1049,9 @@
               <div class="item-title">${f.fill_date} (${dayName}) • ${fmt(f.amount)}</div>
               <div class="item-sub">${f.filled_l} L @ ₹${f.price_per_l}/L • Range: <b>${f.km_range} km</b></div>
             </div>
-            <div style="display:flex; align-items:center;">
+            <div style="display:flex; align-items:center; flex-shrink:0;">
               <div style="text-align:right;">
-                <span class="badge ${avgBadge}" style="font-size:0.8rem;">${Number(f.mileage).toFixed(1)} km/l</span>
+                <span class="badge ${avgBadge}" style="font-size:0.78rem;">${Number(f.mileage).toFixed(1)} km/l</span>
                 <div class="item-sub" style="margin-top:2px;">${f.account_name || ""}</div>
               </div>
               <button class="del-btn" title="Delete Fuel Entry" onclick="deleteFuelEntry('${f.id}')">×</button>
@@ -869,6 +1059,13 @@
           </div>
         `;
       }).join("");
+    }
+
+    async function quickImportNov25Fuel() {
+      await sb.from("finance_fuel").insert({
+        user_id: currentUser.id, fill_date: "2026-11-25", price_per_l: 107.47, amount: 333, filled_l: 3.10, km_range: 118.9, mileage: 38.35, account_name: "Cash in Hand"
+      });
+      await loadAllData();
     }
 
     async function submitFuelEntry() {
@@ -941,17 +1138,17 @@
       const cards = state.accounts.filter(a => a.account_type === "credit_card");
       document.getElementById("cardsListContainer").innerHTML = cards.map(c => `
         <div class="list-item" style="flex-direction:column; align-items:stretch;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div class="item-title" style="font-size:1rem;">${c.name}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="min-width:0;">
+              <div class="item-title" style="font-size:0.98rem;">${c.name}</div>
               <div class="item-sub">Bill Gen: ${c.bill_day}th • Due: ${c.due_day}th</div>
             </div>
-            <div style="text-align:right;">
+            <div style="text-align:right; flex-shrink:0;">
               <div class="stat-val ${Number(c.balance) > 0 ? 'text-red' : 'text-green'}">${fmt(c.balance)}</div>
               ${Number(c.unbilled_amount) > 0 ? `<div class="item-sub text-amber">+ ${fmt(c.unbilled_amount)} unbilled</div>` : ""}
             </div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px; flex-wrap:wrap;">
             <span class="item-sub">${c.last_paid_note || "Active"}</span>
             <button class="icon-btn" onclick="openEditCardModal('${c.id}')">Update O/S or Due Date</button>
           </div>
@@ -985,7 +1182,7 @@
               <div class="item-sub">${r.source_note || ""}</div>
               <div style="margin-top:4px;">${statusHtml}</div>
             </div>
-            <div style="display:flex; gap:5px; align-items:center;">
+            <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
               <button class="icon-btn" onclick="openEditRecurringModal('${r.id}')">Edit</button>
               ${isPaid
                 ? `<button class="btn btn-sm btn-outline" onclick="unmarkRecurring('${r.id}')">Undo</button>`
@@ -997,7 +1194,7 @@
       }).join("");
     }
 
-    // RENDER FRIENDS LEDGER (WITH ONE-CLICK WHATSAPP BUTTON)
+    // RENDER FRIENDS LEDGER
     function renderFriends() {
       const map = {};
       state.friends.forEach(f => {
@@ -1021,7 +1218,7 @@
                 <div class="item-title">${name} ${phone ? `<span style="font-size:0.72rem; color:var(--muted); font-weight:400;">(${phone})</span>` : ""}</div>
                 <div class="item-sub">Given: ${fmt(map[name].given)} • Returned: ${fmt(map[name].returned)}</div>
               </div>
-              <div style="text-align:right;">
+              <div style="text-align:right; flex-shrink:0;">
                 <div class="stat-val ${pending > 0 ? 'text-blue' : 'text-green'}">${fmt(pending)}</div>
                 <div style="display:flex; gap:5px; justify-content:flex-end; margin-top:5px;">
                   ${pending > 0 ? `<button class="btn btn-sm btn-success" style="background:#25D366; color:#fff;" onclick="sendFriendWhatsApp('${name.replace(/'/g, "\\'")}', ${pending}, '${phone}')">WhatsApp</button>` : ""}
@@ -1038,7 +1235,7 @@
             <div class="item-title">${f.friend_name} — ${f.entry_type === 'given' ? 'Gave Money' : 'Received Back'}</div>
             <div class="item-sub">${f.entry_date} ${f.note ? `• ${f.note}` : ""}</div>
           </div>
-          <div style="display:flex; align-items:center;">
+          <div style="display:flex; align-items:center; flex-shrink:0;">
             <div class="stat-val ${f.entry_type === 'given' ? 'text-red' : 'text-green'}">
               ${f.entry_type === 'given' ? '-' : '+'}${fmt(f.amount)}
             </div>
@@ -1141,7 +1338,7 @@
       await loadAllData();
     }
 
-    // QUICK ENTRY FORM DYNAMIC OPTIONS (WITH STICKY ACCOUNT MEMORY)
+    // QUICK ENTRY FORM DYNAMIC OPTIONS
     function updateFormFields() {
       const type = document.getElementById("txType").value;
       const catGroup = document.getElementById("categoryGroup");
@@ -1450,7 +1647,7 @@
     }
 
     // AUTO-UPDATE ENGINE FOR iPHONE HOME SCREEN APP
-    const APP_VERSION = "1.4.0";
+    const APP_VERSION = "1.5.0";
 
     async function checkForAppUpdate(manual = false) {
       const btn = document.getElementById("syncBtn");
