@@ -487,13 +487,22 @@
         { user_id: uid, friend_name: "Gupta", entry_type: "given", amount: 155, account_name: "Opening Balance", note: "Initial pending udhaar (Part 2)", entry_date: "2026-11-25" }
       ];
 
-      await sb.from("finance_accounts").insert(accountsPayload);
-      await sb.from("finance_recurring").insert(recurringPayload);
-      await sb.from("finance_friends").insert(friendsPayload);
+      const [r1, r2, r3] = await Promise.all([
+        sb.from("finance_accounts").insert(accountsPayload),
+        sb.from("finance_recurring").insert(recurringPayload),
+        sb.from("finance_friends").insert(friendsPayload)
+      ]);
+
+      const err = r1.error || r2.error || r3.error;
+      if (err) {
+        alert("Supabase Error: " + err.message);
+        btn.disabled = false;
+        btn.textContent = "Load My Initial Financial Data";
+        return;
+      }
 
       await loadAllData();
     }
-
     // HELPER: FORMAT CURRENCY
     const fmt = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
