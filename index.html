@@ -285,7 +285,7 @@
       background: var(--primary);
       color: #fff;
     }
-    .btn-sm { padding: 6px 10px; font-size: 0.74rem; border-radius: 8px; width: auto; }
+    .btn-sm { padding: 5px 9px; font-size: 0.72rem; border-radius: 8px; width: auto; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-success { background: var(--success); color: #fff; }
 
@@ -406,6 +406,18 @@
               <div class="stat-val text-blue" id="friendsTotalVal">₹0</div>
             </div>
           </div>
+
+          <!-- ZERO-DUPLICATE CYCLE FIXED DUES BOX -->
+          <div class="stat-box" style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="min-width:0;">
+              <div class="stat-label" style="margin-bottom:2px;">Unpaid Fixed EMIs & Interests (Cycle)</div>
+              <div class="item-sub" id="cycleDuesBreakdown" style="margin-top:0;">Direct: ₹0 • Papa's Bank: ₹0</div>
+            </div>
+            <div style="text-align:right; flex-shrink:0;">
+              <div class="stat-val text-amber" id="totalCycleDuesVal">₹0</div>
+              <div class="item-sub" id="cyclePaidCountLabel" style="margin-top:0;">0 paid</div>
+            </div>
+          </div>
         </div>
 
         <!-- SMART CASH-FLOW COACH -->
@@ -414,9 +426,12 @@
           <div id="coachContainer"></div>
         </div>
 
-        <!-- UPCOMING EMIS & DUE DATES -->
+        <!-- ALL UPCOMING UNPAID EMIS, INTERESTS & CARD BILLS -->
         <div class="card">
-          <div class="card-title"><span>Upcoming Dues & Reminders</span><button class="icon-btn" onclick="switchTab('dues')">View All</button></div>
+          <div class="card-title">
+            <span>All Unpaid EMIs & Dues (Cycle)</span>
+            <button class="icon-btn" onclick="switchTab('dues')">Manage EMIs</button>
+          </div>
           <div id="upcomingDuesContainer"></div>
         </div>
 
@@ -597,7 +612,7 @@
             <button class="icon-btn" onclick="openAddRecurringModal()">+ Add New</button>
           </div>
           <p style="font-size:0.76rem; color:var(--muted); margin-bottom:10px;">
-            Tick when paid (even in advance) — auto-records exact payment date and clears reminders for this month.
+            Tick when paid (even in advance) — auto-deducts from your pending cycle total and resets automatically after the due date passes.
           </p>
           <div id="allRecurringContainer"></div>
         </div>
@@ -666,7 +681,7 @@
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (themeMode === "auto") applyTheme(); });
     applyTheme();
 
-    // AUDIT LOG RECORDER (EVERY CREATE, EDIT, DELETE, PAYMENT)
+    // AUDIT LOG RECORDER
     async function recordAuditLog(action_type, module, summary, amount = null) {
       if (!currentUser) return;
       try {
@@ -727,7 +742,7 @@
       updateFormFields();
     }
 
-    // LOAD DATA FROM SUPABASE (INCLUDING LAST 30 DAYS AUDIT LOGS)
+    // LOAD DATA FROM SUPABASE
     async function loadAllData() {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -858,6 +873,16 @@
       return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
     }
 
+    function getNextDueDateLabel(dueDay) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let target = new Date(today.getFullYear(), today.getMonth(), dueDay);
+      if (target < today) {
+        target = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
+      }
+      return target.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    }
+
     // RENDER TAMPER-PROOF ACTIVITY & AUDIT LOG (LAST 30 DAYS)
     function setAuditFilter(filterType, btnEl) {
       currentAuditFilter = filterType;
@@ -919,6 +944,48 @@
       netEl.className = "stat-val " + (netPos >= 0 ? "text-green" : "text-red");
       document.getElementById("friendsTotalVal").textContent = fmt(friendsPending);
 
+      // Zero-Duplicate Cycle Fixed Dues Calculation (Direct vs Papa-Managed)
+      let directCycleDues = 0;
+      let papaCycleDues = 0;
+      let paidCount = 0;
+      const upcomingItems = [];
+
+      state.recurring.forEach(r => {
+        const cycle = getTargetCycleMonth(r.due_day);
+        const isPaid = r.last_paid_month === cycle;
+        const daysLeft = getDaysUntil(r.due_day);
+        const isPapa = (r.source_note || "").toLowerCase().includes("papa");
+
+        if (isPaid) {
+          paidCount++;
+        } else {
+          if (isPapa) papaCycleDues += Number(r.amount);
+          else directCycleDues += Number(r.amount);
+          upcomingItems.push({ ...r, daysLeft, kind: "recurring", isPapa });
+        }
+      });
+
+      cards.forEach(c => {
+        if (Number(c.balance) > 0 && c.due_day) {
+          const daysLeft = getDaysUntil(c.due_day);
+          upcomingItems.push({
+            id: c.id,
+            title: `${c.name} Bill`,
+            amount: c.balance,
+            due_day: c.due_day,
+            daysLeft,
+            kind: "card"
+          });
+        }
+      });
+
+      upcomingItems.sort((a, b) => a.daysLeft - b.daysLeft);
+
+      const totalUnpaidFixed = directCycleDues + papaCycleDues;
+      document.getElementById("totalCycleDuesVal").textContent = fmt(totalUnpaidFixed);
+      document.getElementById("cycleDuesBreakdown").textContent = `My Direct: ${fmt(directCycleDues)} • Papa's Bank: ${fmt(papaCycleDues)}`;
+      document.getElementById("cyclePaidCountLabel").textContent = `${paidCount}/${state.recurring.length} paid`;
+
       // Bank List
       document.getElementById("bankListContainer").innerHTML = banksAndCash.map(b => `
         <div class="list-item">
@@ -950,44 +1017,29 @@
         });
       }
 
-      const upcomingItems = [];
-      state.recurring.forEach(r => {
-        const cycle = getTargetCycleMonth(r.due_day);
-        const isPaid = r.last_paid_month === cycle;
-        const daysLeft = getDaysUntil(r.due_day);
-        if (!isPaid && daysLeft <= 7) {
-          upcomingItems.push({ ...r, daysLeft, kind: "recurring" });
-          if (daysLeft === 0) {
-            coachAlerts.push({ type: "danger", title: `DUE TODAY: ${r.title}`, msg: `${fmt(r.amount)} is due today! Tick it in EMIs tab once paid.` });
-          } else if (daysLeft <= 2) {
-            coachAlerts.push({ type: "warning", title: `Due in ${daysLeft} Day(s): ${r.title}`, msg: `Keep ${fmt(r.amount)} ready (${r.source_note}).` });
-          } else if (daysLeft <= 5) {
-            coachAlerts.push({ type: "info", title: `Upcoming in ${daysLeft} Days: ${r.title}`, msg: `${fmt(r.amount)} due on ${r.due_day}th.` });
+      upcomingItems.forEach(u => {
+        if (u.kind === "recurring") {
+          if (u.daysLeft === 0) {
+            coachAlerts.push({ type: "danger", title: `DUE TODAY: ${u.title}`, msg: `${fmt(u.amount)} is due today! Tick "✓ Paid" below once cleared.` });
+          } else if (u.daysLeft <= 2) {
+            coachAlerts.push({ type: "warning", title: `Due in ${u.daysLeft} Day(s): ${u.title}`, msg: `Keep ${fmt(u.amount)} ready (${u.source_note}).` });
           }
         }
       });
 
-      cards.forEach(c => {
-        if (Number(c.balance) > 0 && c.due_day) {
-          const daysLeft = getDaysUntil(c.due_day);
-          if (daysLeft <= 10) {
-            upcomingItems.push({ title: `${c.name} Bill`, amount: c.balance, due_day: c.due_day, daysLeft, kind: "card" });
-          }
-        }
-      });
-
-      upcomingItems.sort((a, b) => a.daysLeft - b.daysLeft);
-
-      if (totalBilledCC > totalLiquid) {
+      // 15-Day Direct Liquidity Check (Direct Cycle Dues + Billed CC vs Current Bank + Expected 7th/10th Inflows)
+      const totalDirectObligations = directCycleDues + totalBilledCC;
+      if (totalDirectObligations > totalLiquid) {
+        const gap = totalDirectObligations - totalLiquid;
         coachAlerts.push({
           type: "info",
-          title: "Upcoming Liquidity Gap",
-          msg: `Billed CC dues (${fmt(totalBilledCC)}) exceed current bank balance (${fmt(totalLiquid)}) by ${fmt(totalBilledCC - totalLiquid)}. Plan allocation from 7th Salary (₹37,080) or Ankit's 10th Cash (₹20,000).`
+          title: "Upcoming Cycle Allocation Plan",
+          msg: `Your direct unpaid EMIs (${fmt(directCycleDues)}) + Billed CCs (${fmt(totalBilledCC)}) = ${fmt(totalDirectObligations)}. Shortfall vs today's bank balance is ${fmt(gap)} — reserve this from your 7th Salary (₹37,080) & 10th Ankit Cash (₹20,000).`
         });
       }
 
       if (coachAlerts.length === 0) {
-        coachAlerts.push({ type: "success", title: "Cash-Flow Looking Steady", msg: "No urgent 5-day dues pending. Keep logging daily expenses to protect your monthly surplus." });
+        coachAlerts.push({ type: "success", title: "Cash-Flow Looking Steady", msg: "All current obligations are covered. Keep logging daily expenses to protect your monthly surplus." });
       }
 
       document.getElementById("coachContainer").innerHTML = coachAlerts.map(a => `
@@ -997,18 +1049,31 @@
         </div>
       `).join("");
 
+      // Render ALL Upcoming Unpaid EMIs, Interests & Card Bills (Chronological)
       document.getElementById("upcomingDuesContainer").innerHTML = upcomingItems.length === 0
-        ? `<p style="font-size:0.84rem; color:var(--muted);">No unpaid EMIs or CC bills due in the next 7 days.</p>`
+        ? `<p style="font-size:0.84rem; color:var(--success); font-weight:600;">All EMIs, interests, and billed cards for this cycle are paid!</p>`
         : upcomingItems.map(u => {
-          const badgeClass = u.daysLeft === 0 ? "badge-red" : u.daysLeft <= 2 ? "badge-amber" : "badge-blue";
-          const dayText = u.daysLeft === 0 ? "DUE TODAY" : `In ${u.daysLeft}d (${u.due_day}th)`;
+          const badgeClass = u.daysLeft === 0 ? "badge-red" : u.daysLeft <= 3 ? "badge-amber" : "badge-blue";
+          const dateLabel = getNextDueDateLabel(u.due_day);
+          const dayText = u.daysLeft === 0 ? `DUE TODAY (${dateLabel})` : `In ${u.daysLeft}d • ${dateLabel}`;
+          const tagHtml = u.kind === "card"
+            ? `<span class="badge badge-red" style="margin-left:4px;">CC BILL</span>`
+            : (u.isPapa ? `<span class="badge badge-blue" style="margin-left:4px;">PAPA</span>` : ``);
+
+          const actionBtn = u.kind === "recurring"
+            ? `<button class="btn btn-sm btn-success" style="margin-left:6px;" onclick="openPayRecurringModal('${u.id}')">✓ Paid</button>`
+            : `<button class="icon-btn" style="margin-left:6px;" onclick="switchTab('add'); document.getElementById('txType').value='cc_payment'; updateFormFields(); document.getElementById('txToAccount').value='${u.title.replace(' Bill', '')}'; document.getElementById('txAmount').value='${u.amount}';">Pay</button>`;
+
           return `
             <div class="list-item">
               <div class="item-main">
                 <div class="item-title">${u.title}</div>
-                <div class="item-sub"><span class="badge ${badgeClass}">${dayText}</span></div>
+                <div class="item-sub"><span class="badge ${badgeClass}">${dayText}</span>${tagHtml}</div>
               </div>
-              <div class="stat-val">${fmt(u.amount)}</div>
+              <div style="display:flex; align-items:center; flex-shrink:0;">
+                <div class="stat-val">${fmt(u.amount)}</div>
+                ${actionBtn}
+              </div>
             </div>
           `;
         }).join("");
@@ -1287,7 +1352,7 @@
         } else if (daysLeft <= 5) {
           statusHtml = `<span class="badge badge-blue">Due in ${daysLeft}d (${r.due_day}th)</span>`;
         } else {
-          statusHtml = `<span class="item-sub">Due: ${r.due_day}th of month</span>`;
+          statusHtml = `<span class="item-sub">Due: ${r.due_day}th of month (${getNextDueDateLabel(r.due_day)})</span>`;
         }
 
         return `
@@ -1839,7 +1904,7 @@
     }
 
     // AUTO-UPDATE ENGINE FOR iPHONE HOME SCREEN APP
-    const APP_VERSION = "1.6.0";
+    const APP_VERSION = "1.7.0";
 
     async function checkForAppUpdate(manual = false) {
       const btn = document.getElementById("syncBtn");
